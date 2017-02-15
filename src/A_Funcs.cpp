@@ -160,6 +160,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return CallWindowProcA(WNDPROC(lOldWndProc), hwnd, uMsg, wParam, lParam);
 }
 
+
 LRESULT CALLBACK LLKeyProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	if (GetForegroundWindow() == *(HWND*)0xC97C1C)

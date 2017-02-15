@@ -23,6 +23,22 @@
 
 #include "main.h"
 
+#define D3DCOLOR_RGBX(r,g,b) \
+    ((D3DCOLOR)((((r)&0xff)<<24)|(((g)&0xff)<<16)|(((b)&0xff)<<8)|(0xff)))
+
+#define D3DCOLOR_COMPARE(color,r,g,b) \
+    (color >> 8)==((D3DCOLOR)((((r)&0xff)<<16)|(((g)&0xff)<<8)|((b)&0xff)))
+#define D3DCOLOR_RGBX(r,g,b) \
+    ((D3DCOLOR)((((r)&0xff)<<24)|(((g)&0xff)<<16)|(((b)&0xff)<<8)|(0xff)))
+
+void changeColorClientMsg(BitStream* bitStream, DWORD dwNewColor, DWORD dwLen, const char* msg)
+{
+	bitStream->ResetWritePointer();
+	bitStream->Write(dwNewColor);
+	bitStream->Write(dwLen);
+	bitStream->Write(msg, dwLen);
+}
+
 int			g_iJoiningServer = 0;
 int			iClickWarpEnabled = 0;
 int			g_iNumPlayersMuted = 0;
@@ -113,6 +129,10 @@ void sampMainCheat(void)
 			}
 		}
 	}
+	if (set.auto_chatcolors)
+    {
+		cheat_state->_generic.chatcolors = 1;
+    }
 	if (set.clickwarp_enabled && iIsSAMPSupported)
 	{
 		if (KEYCOMBO_PRESSED(set.key_clickwarp_enable))
@@ -273,40 +293,50 @@ void HandleRPCPacketFunc(unsigned char id, RPCParameters *rpcParams, void(*callb
 				bsData.Read(szMsg, dwStrLen);
 				szMsg[dwStrLen] = '\0';
 
-				if (set.anti_spam && (strcmp(last_servermsg, szMsg) == 0 && GetTickCount() < allow_show_again))
-					return; // exit without processing rpc
-
-				// might be a personal message by muted player - look for name in server message
-				// ignore message, if name was found
-				if (set.anti_spam && g_iNumPlayersMuted > 0)
+				if (cheat_state->_generic.chatcolors == 1)
 				{
-					int i, j;
-					char *playerName = NULL;
-					for (i = 0, j = 0; i < SAMP_MAX_PLAYERS && j < g_iNumPlayersMuted; i++)
+					if (D3DCOLOR_COMPARE(dwColor, 217, 119, 0))
 					{
-						if (g_bPlayerMuted[i])
+						if (set.chatcolors_report && strstr(szMsg, "Жалоба от ") && strstr(szMsg, " на "))
 						{
-							playerName = (char *)getPlayerName(i);
-
-							if (playerName == NULL)
-							{
-								// Player not connected anymore - remove player from muted list
-								g_bPlayerMuted[i] = false;
-								g_iNumPlayersMuted--;
-								continue;
-							}
-							else if (strstr(szMsg, playerName) != NULL)
-							{
-								return;
-							}
-							j++;
+							changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rreport, set.greport, set.breport), dwStrLen, szMsg);
+							break;
 						}
+						else
+							if (set.chatcolors_feedback && strstr(szMsg, "Репорт от"))
+							{
+								changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rfeedback, set.gfeedback, set.bfeedback), dwStrLen, szMsg);
+								break;
+							}
+							else
+								if (set.chatcolors_reportr && strstr(szMsg, "<-Ответ К"))
+								{
+									changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rreportr, set.greportr, set.breportr), dwStrLen, szMsg);
+									break;
+								}
 					}
+					else
+						if (D3DCOLOR_COMPARE(dwColor, 255, 165, 0))
+						{
+							if (set.chatcolors_support)
+								if (strstr(szMsg, "<SUPPORT-CHAT> ") || strstr(szMsg, "<-") && strstr(szMsg, " to ")
+									&& strstr(szMsg, ": ") || strstr(szMsg, "->Вопрос") && strstr(szMsg, ": "))
+								{
+									changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rsupport, set.gsupport, set.bsupport), dwStrLen, szMsg);
+									break;
+								}
+						}
+						else
+							if (D3DCOLOR_COMPARE(dwColor, 255, 255, 0))
+							{
+								if (set.chatcolors_sms)
+									if (strstr(szMsg, "SMS: ") && (strstr(szMsg, "Отправитель: ") || strstr(szMsg, "Получатель: ")))
+									{
+										changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rsms, set.gsms, set.bsms), dwStrLen, szMsg);
+										break;
+									}
+							}
 				}
-				if (set.chatbox_logging)
-					LogChatbox(false, "%s", szMsg);
-				strncpy_s(last_servermsg, szMsg, sizeof(last_servermsg) - 1);
-				allow_show_again = GetTickCount() + 5000;
 				break;
 			}
 			case RPC_Chat:

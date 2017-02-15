@@ -67,6 +67,10 @@ struct keycombo
 	uint8_t key[INI_KEYCOMBO_MAX];
 };
 
+struct values
+{
+};
+
 // set structure
 // DO NOT use bool types in here, it screws up the alignment even with pragma pack directive
 struct settings
@@ -76,6 +80,16 @@ struct settings
 	int						i_have_edited_the_ini_file;
 	int						basic_mode;
 	int						fps_limit;
+
+	int						traces;
+
+	int						rtraces_hit;
+	int						gtraces_hit;
+	int						btraces_hit;
+
+	int						rtraces;
+	int						gtraces;
+	int						btraces;
 
 	keycombo				key_hp_cheat;
 	float					hp_minimum;
@@ -130,6 +144,35 @@ struct settings
 	keycombo				key_disable_Wall_Collisions;
 	int						wall_collisions_disableObjects;
 	int						wall_collisions_disableRender;
+	
+	/* Авто функции */
+
+	int						auto_chatcolors;
+	int						hud_indicator_chatcolors;
+
+	/* Цвета чата */
+	int						rsms;
+	int						gsms;
+	int						bsms;
+	int						rreport;
+	int						greport;
+	int						breport;
+	int						rreportr;
+	int						greportr;
+	int						breportr;
+	int						rsupport;
+	int						gsupport;
+	int						bsupport;
+	int						gvpor;
+	int						rfeedback;
+	int						gfeedback;
+	int						bfeedback;
+
+	int						chatcolors_sms;
+	int						chatcolors_report;
+	int						chatcolors_feedback;
+	int						chatcolors_reportr;
+	int						chatcolors_support;
 
 	keycombo				key_repair_car;
 
@@ -401,9 +444,12 @@ struct settings
 	int						__DUMMYFUCKER_DONOTDELETE;
 };
 
+char			*getWeaponName(int weaponID);
+
 
 ///////////////////////////////////////////////
 extern struct settings	set;
+extern struct values	val;
 
 void					ini_load ( void );
 void					ini_reload ( void );

@@ -66,6 +66,7 @@ struct ini_entry
 };
 
 struct settings			set;
+struct values			val;
 
 static struct key_alias key_alias[] =
 {
@@ -699,6 +700,63 @@ static void ini_init ( void )
 		ini_register_data( ent, &set.key_menu_inc, "add" );
 	if ( (ent = ini_register_entry("key_menu_mousecontrol", TYPE_KEYCOMBO)) != NULL )
 		ini_register_data( ent, &set.key_menu_mousecontrol, "lshift" );
+
+	/* Цвета чата */
+	if ( (ent = ini_register_entry("hud_indicator_chatcolors", TYPE_BOOL)) != NULL )
+		ini_register_data( ent, &set.hud_indicator_chatcolors, "true" );
+
+	if ( (ent = ini_register_entry("auto_chatcolors", TYPE_BOOL)) != NULL )
+		ini_register_data( ent, &set.auto_chatcolors, "true" );
+
+	if ( (ent = ini_register_entry("chatcolors_sms", TYPE_BOOL)) != NULL )
+		ini_register_data( ent, &set.chatcolors_sms, "true" );
+
+	if ( (ent = ini_register_entry("chatcolors_report", TYPE_BOOL)) != NULL )
+		ini_register_data( ent, &set.chatcolors_report, "false" );
+
+	if ( (ent = ini_register_entry("chatcolors_feedback", TYPE_BOOL)) != NULL )
+		ini_register_data( ent, &set.chatcolors_feedback, "false" );
+
+	if ( (ent = ini_register_entry("chatcolors_reportr", TYPE_BOOL)) != NULL )
+		ini_register_data( ent, &set.chatcolors_reportr, "true" );
+
+	if ( (ent = ini_register_entry("chatcolors_support", TYPE_BOOL)) != NULL )
+		ini_register_data( ent, &set.chatcolors_support, "true" );
+
+	if ( (ent = ini_register_entry("rsms", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.rsms, "182" );
+	if ( (ent = ini_register_entry("gsms", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.gsms, "206" );
+	if ( (ent = ini_register_entry("bsms", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.bsms, "85" );
+
+	if ( (ent = ini_register_entry("rreport", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.rreport, "217" );
+	if ( (ent = ini_register_entry("greport", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.greport, "54" );
+	if ( (ent = ini_register_entry("breport", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.breport, "0" );
+
+	if ( (ent = ini_register_entry("rreportr", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.rreportr, "179" );
+	if ( (ent = ini_register_entry("greportr", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.greportr, "136" );
+	if ( (ent = ini_register_entry("breportr", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.breportr, "123" );
+	if ( (ent = ini_register_entry("rsupport", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.rsupport, "0" );
+	if ( (ent = ini_register_entry("gsupport", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.gsupport, "255" );
+	if ( (ent = ini_register_entry("bsupport", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.bsupport, "196" );
+	if ( (ent = ini_register_entry("rfeedback", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.rfeedback, "217" );
+	if ( (ent = ini_register_entry("gfeedback", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.gfeedback, "119" );
+	if ( (ent = ini_register_entry("bfeedback", TYPE_INT)) != NULL )
+		ini_register_data( ent, &set.bfeedback, "0" );
+
+	//////////////////////////////////////////////////////////////////
 
 	// custom GUI settings
 	if ( (ent = ini_register_entry("hud_draw_bar", TYPE_BOOL)) != NULL )
