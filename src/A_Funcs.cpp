@@ -123,6 +123,13 @@ bool stringToD3DColor(const char* szStrColor, D3DCOLOR* dwOutColor)
 	}
 }
 
+void DefaultFunctions()
+{
+
+	if (set.auto_chatcolors)
+		cheat_state->_generic.chatcolors = 1;
+}
+
 void D3DColorToStringColor(D3DCOLOR dwColor, char *szOutColor)
 {
 	sprintf(szOutColor, "{%06X}", dwColor & 0x00FFFFFF/*(dwColor << 8) >> 8*/);

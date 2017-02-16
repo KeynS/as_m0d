@@ -129,10 +129,6 @@ void sampMainCheat(void)
 			}
 		}
 	}
-	if (set.auto_chatcolors)
-    {
-		cheat_state->_generic.chatcolors = 1;
-    }
 	if (set.clickwarp_enabled && iIsSAMPSupported)
 	{
 		if (KEYCOMBO_PRESSED(set.key_clickwarp_enable))

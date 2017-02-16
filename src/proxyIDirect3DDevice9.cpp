@@ -3004,7 +3004,8 @@ void renderSAMP ( void )
 		memset_safe((void *)0x53E94C, 0, 1);
 		
 	//	addMessageToChatWindow("%s%s %swith %s%s %s %sloaded (Дороботка by %sMarko Friedmann%s)", szColorEnable, M0D_NAME, szColorText, szColorEnable, M0DM_NAME, M0DM_VERS, szColorText, szColorEnable, szColorText);
-		
+		DefaultFunctions();
+
 		g_renderSAMP_initSAMPstructs = 1;
 	}
 
@@ -3040,6 +3041,7 @@ void renderSAMP ( void )
 			else
 				renderPlayerInfo( iViewingInfoPlayer );
 		}
+
 
 		static int	a;
 		if ( !a )
@@ -3542,16 +3544,6 @@ void renderHandler()
 					HUD_TEXT_TGL( x, cheat_state->_generic.hp_cheat ? color_enabled : color_disabled, "Inv" );
 				}
 
-				if ( set.hud_indicator_weapon )
-				{
-					HUD_TEXT_TGL( x, cheat_state->_generic.weapon ? color_enabled : color_disabled, "Weapon" );
-				}
-
-				if ( set.hud_indicator_freeze )
-				{
-					HUD_TEXT_TGL( x, cheat_state->_generic.vehicles_freeze ? color_enabled : color_disabled, "Freeze" );
-				}
-
 				if ( set.hud_fps_draw )
 				{
 					float		m_FPS = getFPS();
@@ -3590,10 +3582,6 @@ void renderHandler()
 					HUD_TEXT_TGL( x, cheat_state->vehicle.fly ? color_enabled : color_disabled, "Fly" );
 				}
 
-				if ( set.hud_indicator_freezerot )
-				{
-					HUD_TEXT_TGL( x, cheat_state->vehicle.freezerot ? color_enabled : color_disabled, "FreezeRot" );
-				}
 				if (set.hud_indicator_chatcolors && !gta_menu_active())
 				{
 					HUD_TEXT_TGL(x, cheat_state->_generic.chatcolors ? color_enabled : color_disabled, "ChatColors");

@@ -51,8 +51,8 @@
 #define ID_MENU_SERVER_LIST		21
 #define ID_MENU_HUDINDICATORS	22
 #define ID_MENU_INTERIORS		23
-#define ID_CHATCOLOURS			60
-#define ID_MENU_ADMINS			61
+#define ID_CHATCOLOURS			65
+#define ID_MENU_ADMINS			66
 
 #ifdef __CHEAT_VEHRECORDING_H__
 #define ID_MENU_ROUTES			26
@@ -2827,7 +2827,7 @@ void menu_maybe_init ( void )
 	traceLastFunc( "menu_maybe_init()" );
 	if ( menu_init )
 		return;
-
+	
 	struct menu *menu_main, *menu_cheats, *menu_admintool, *menu_cheats_mods, *menu_chat_colors, *menu_cheats_inv, *
 		menu_cheats_weather, *menu_cheats_time, *menu_weapons, *menu_vehicles, *
 			menu_misc, *menu_hudindicators, *menu_patches, *menu_players, *
@@ -2837,7 +2837,7 @@ void menu_maybe_init ( void )
 #endif
 
 	//*menu_cheats_handling,
-	*menu_player_info, *menu_players_mute, *menu_sampmisc, *menu_admintools, *menu_spoof_weapon, *menu_vehicles_instant, 
+	*menu_player_info, *menu_players_mute, *menu_sampmisc, *menu_spoof_weapon, *menu_vehicles_instant, 
 	*menu_gamestate, *menu_specialaction, *menu_teleobject, *menu_telepickup, *menu_samppatches,
 	*menu_netpatches_inrpc, *menu_netpatches_outrpc, *menu_netpatches_inpacket, *menu_netpatches_outpacket;
 
