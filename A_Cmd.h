@@ -1,0 +1,1 @@
+void		adminFunctions_cmds();
