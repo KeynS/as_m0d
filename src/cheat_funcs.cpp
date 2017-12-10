@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 	PROJECT:		mod_sa
 	LICENSE:		See LICENSE in the top level directory
@@ -774,6 +774,18 @@ const struct weapon_entry *gta_weapon_get_by_name ( const char *name )
 	}
 
 	return NULL;
+}
+
+const char *gta_weapon_name(int id)
+{
+    const struct weapon_entry	*entry = weapon_list;
+    while (entry->name != NULL)
+    {
+        if (entry->id == id)
+            return entry->name;
+        entry++;
+    }
+    return NULL;
 }
 
 void gta_weapon_set ( struct actor_info *info, int slot, int id, int ammo, int ammo_clip )

@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 	PROJECT:		mod_sa
 	LICENSE:		See LICENSE in the top level directory
@@ -23,13 +23,12 @@
 
 #include "main.h"
 
-#define D3DCOLOR_RGBX(r,g,b) \
-    ((D3DCOLOR)((((r)&0xff)<<24)|(((g)&0xff)<<16)|(((b)&0xff)<<8)|(0xff)))
-
 #define D3DCOLOR_COMPARE(color,r,g,b) \
     (color >> 8)==((D3DCOLOR)((((r)&0xff)<<16)|(((g)&0xff)<<8)|((b)&0xff)))
 #define D3DCOLOR_RGBX(r,g,b) \
     ((D3DCOLOR)((((r)&0xff)<<24)|(((g)&0xff)<<16)|(((b)&0xff)<<8)|(0xff)))
+#define D3DCOLOR_RGBX(color) \
+    ((D3DCOLOR)(color << 8)|0xff)
 
 void changeColorClientMsg(BitStream* bitStream, DWORD dwNewColor, DWORD dwLen, const char* msg)
 {
@@ -43,6 +42,12 @@ int			g_iJoiningServer = 0;
 int			iClickWarpEnabled = 0;
 int			g_iNumPlayersMuted = 0;
 bool		g_bPlayerMuted[SAMP_MAX_PLAYERS];
+
+void CALLBACK StatusProc(const void *buffer, DWORD length, void *user)
+{
+	if (buffer && !length && (DWORD)user == 0) // got HTTP/ICY tags, and this is still the current request
+		addMessageToChatWindow("loading..");
+}
 
 void sampMainCheat(void)
 {
@@ -85,9 +90,6 @@ void sampMainCheat(void)
 		}
 	}
 
-	if (KEYCOMBO_PRESSED(set.key_player_info_list))
-		cheat_state->player_info_list ^= 1;
-
 	if (KEYCOMBO_PRESSED(set.key_rejoin))
 	{
 		restartGame();
@@ -95,7 +97,6 @@ void sampMainCheat(void)
 		cheat_state_text("Rejoining in %d seconds...", set.rejoin_delay / 1000);
 		cheat_state->_generic.rejoinTick = GetTickCount();
 	}
-
 	if (KEYCOMBO_PRESSED(set.key_respawn))
 		playerSpawn();
 	
@@ -172,6 +173,8 @@ void sampMainCheat(void)
 		g_iJoiningServer = 0;
 		cheat_state->_generic.join_serverTick = 0;
 	}
+
+	adminMainThread();
 }
 
 void sampAntiHijack(void)
@@ -200,7 +203,7 @@ void sampAntiHijack(void)
 			cheat_state->_generic.car_jacked = false;
 			GTAfunc_PutActorInCar(GetVehicleByGtaId(cheat_state->_generic.car_jacked_last_vehicle_id));
 
-			struct vehicle_info *veh = GetVehicleByGtaId(cheat_state->_generic.car_jacked_last_vehicle_id);
+			//struct vehicle_info *veh = GetVehicleByGtaId(cheat_state->_generic.car_jacked_last_vehicle_id);
 			//if ( veh != NULL )
 			//	vect3_copy( cheat_state->_generic.car_jacked_lastPos, &veh->base.matrix[4 * 3] );
 			GTAfunc_showStyledText("~r~Car Unjacked~w~!", 1000, 5);
@@ -232,142 +235,288 @@ void HandleRPCPacketFunc(unsigned char id, RPCParameters *rpcParams, void(*callb
 	{
 		switch (id)
 		{
-			case RPC_SetPlayerHealth:
-			{
-				if (isCheatPanicEnabled() || !set.enable_extra_godmode || !cheat_state->_generic.hp_cheat) break;
+		case RPC_ClientMessage:
+		{
+			if (cheat_state->_generic.cheat_panic_enabled)
+				break;
 
-				actor_info *self = actor_info_get(ACTOR_SELF, NULL);
-				if (self)
+			BitStream		bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8, false);
+			uint32_t		dwStrLen, dwColor;
+			char			szMsg[256];
+
+			bsData.Read(dwColor);
+			bsData.Read(dwStrLen);
+			if (dwStrLen >= sizeof(szMsg))
+				dwStrLen = sizeof(szMsg) - 1;
+			bsData.Read(szMsg, dwStrLen);
+			szMsg[dwStrLen] = '\0';
+
+			if (set.chatbox_logging)
+				LogChatbox(false, "%s", szMsg);
+
+			if (strstr(szMsg, "Nik ["))
+			{
+				if (strstr(szMsg, "   R-IP [") && strstr(szMsg, "   L-IP [") && strstr(szMsg, "   IP ["))
 				{
-					BitStream bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8, false);
-					float fHealth;
-					bsData.Read(fHealth);
-					if (fHealth < self->hitpoints)
+					StringFind(szMsg, "   R-IP [", ']', A_Set.IP[0]);
+					StringFind(szMsg, "   IP [", ']', A_Set.IP[1]);
+					StringFind(szMsg, "Nik [", ']', A_Set.IP[2]);
+					A_Set.lastip = 1;
+				}
+				else if (strstr(szMsg, "Register-IP [") && strstr(szMsg, "Last-IP ["))
+				{
+					StringFind(szMsg, "   Register-IP [", ']', A_Set.IP[0]);
+					StringFind(szMsg, "   Last-IP [", ']', A_Set.IP[1]);
+					StringFind(szMsg, "Nik [", ']', A_Set.IP[2]);
+					A_Set.lastip = 1;
+				}
+			}
+
+			if (strstr(szMsg, "Ваш телефон включен!"))
+			{
+				A_Set.phonestate = 0;
+			}
+			else if (strstr(szMsg, "Ваш телефон выключен!"))
+			{
+				A_Set.phonestate = 1;
+			}
+
+				for (int p = 0; p <= g_Players->ulMaxPlayerID; ++p)
+				{
+					if (!g_Players->iIsListed[p])
+						continue;
+
+					if (strstr(szMsg, "<Warning>") && strstr(szMsg, getPlayerName(p)))
 					{
-						cheat_state_text("Warning: Server tried change your health to %0.1f", fHealth);
-						return; // exit from the function without processing RPC
+						A_Set.warningid = p;
+						A_Set.warningvalid = 1;
+					}
+
+					char search[40];
+					sprintf(search, "на %s[%d]: ", getPlayerName(p), p);
+
+					if (strstr(szMsg, search) && !strstr(szMsg, "Убил транспортом"))
+					{
+						A_Set.reportid = p;
+						A_Set.reportvalid = 1;
 					}
 				}
-				break;
-			}
-			case RPC_SetVehicleHealth:
-			{
-				if (isCheatPanicEnabled() || !set.enable_extra_godmode || !cheat_state->_generic.hp_cheat) break;
-
-				vehicle_info *vself = vehicle_info_get(VEHICLE_SELF, NULL);
-				if (vself)
+				if (strstr(szMsg, "[забанил: ") && strstr(szMsg, "[забанен: ") && strstr(szMsg, "[причина: "))
 				{
-					BitStream bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8, false);
-					short sId;
-					float fHealth;
-					bsData.Read(sId);
-					bsData.Read(fHealth);
-					if (sId == g_Players->pLocalPlayer->sCurrentVehicleID && fHealth < vself->hitpoints)
+					if (strstr(szMsg, "IOffBan") || strstr(szMsg, "OffBan"))
 					{
-						cheat_state_text("Warning: Server tried change your vehicle health to %0.1f", fHealth);
-						return; // exit from the function without processing RPC
+						adminLog(A_Set.fLogBan, szMsg);
+						A_Set.ipoffban = 1;
+						StringFind(szMsg, "[забанил: ", ']', A_Set.banIP[0]);
+						StringFind(szMsg, "[забанен: ", ']', A_Set.banIP[1]);
 					}
 				}
-				break;
-			}
-			case RPC_ClientMessage:
-			{
-				if (isCheatPanicEnabled() || !set.anti_spam && !set.chatbox_logging) break;
+                if (strstr(szMsg, "Администратор: ")) {
+                    if (A_Set.bLogBan && strstr(szMsg, " забанил "))
+                        adminLog(A_Set.fLogBan, szMsg);
 
-				BitStream		bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8, false);
-				uint32_t		dwStrLen, dwColor;
-				char			szMsg[256];
-				static char		last_servermsg[256];
-				static DWORD	allow_show_again = 0;
+                    if (A_Set.bLogWarn && strstr(szMsg, " выдал warn "))
+                        adminLog(A_Set.fLogWarn, szMsg);
+                }
+				if (A_Set.bMassTP && A_Set.usMaxPlayerTP <= g_Players->ulMaxPlayerID && strstr(szMsg, "Отправитель: "))
+				{
+					std::string Msg = szMsg;
+					auto pos = Msg.find_last_of('[');
+					pos++;
+					USHORT id = (USHORT)std::stoi(Msg.substr(pos, Msg.length() - pos - 1));
+					if (g_Players->sLocalPlayerID != id && id <= g_Players->ulMaxPlayerID && g_Players->pRemotePlayer[id]->pPlayerData->pSAMP_Actor == nullptr)
+					{
+						if (std::find(A_Set.PlayersIDForTP.begin(), A_Set.PlayersIDForTP.end(), id) == A_Set.PlayersIDForTP.end())
+						{
+							A_Set.PlayersIDForTP.push_back(id);
+							A_Set.usMaxPlayerTP--;
+						}
+					}
+				}
+				if (A_Set.bChatID)
+				{
+					bool	change = false;
+					if (g_Players->iLocalPlayerNameLen && dwStrLen >= g_Players->iLocalPlayerNameLen)
+					{
+						char *found = strstr(szMsg, (char*)getPlayerName(g_Players->sLocalPlayerID));
+						if (found)
+						{
+							if (found[g_Players->iLocalPlayerNameLen] != '[' && ( found[g_Players->iLocalPlayerNameLen + 1] != '[' || dwColor == 0xAAF79FAA))
+							{
+								change = true;
+								found += g_Players->iLocalPlayerNameLen;
+								strcpy((char*)&szMsg[dwStrLen - strlen(found)], std::string("[" + std::to_string(g_Players->sLocalPlayerID) + "]" + std::string(found)).c_str());
+								dwStrLen = strlen(szMsg);
+							}
+						}
+					}
 
-				if (cheat_state->_generic.cheat_panic_enabled)
-					break;
+					char	*player_name;
+					for (int p = 0; p <= g_Players->ulMaxPlayerID && dwStrLen < 250; ++p)
+					{
+						if (!g_Players->iIsListed[p])
+							continue;
+						player_name = (char*)getPlayerName(p);
+						uint32_t n_len = strlen(player_name);
+						if (dwStrLen >= n_len)
+						{
+							char *found = strstr(szMsg, player_name);
+							if (found)
+							{
+								if (found[n_len] != '[' && ( found[n_len + 1] != '[' || dwColor == 0xAAF79FAA))
+								{
+									change = true;
+									found += n_len;//sprintf(szMsg, "%s[%d]%s", std::string(szMsg).substr(dwStrLen - strlen(found)).c_str(), p, found);
+									strcpy((char*)&szMsg[dwStrLen - strlen(found)], std::string("[" + std::to_string(p) + "]" + std::string(found)).c_str());
+									dwStrLen = strlen(szMsg);
+								}
+							}
+						}
+					}
 
-				bsData.Read(dwColor);
-				bsData.Read(dwStrLen);
-				if (dwStrLen >= sizeof(szMsg)) dwStrLen = sizeof(szMsg) - 1;
-				bsData.Read(szMsg, dwStrLen);
-				szMsg[dwStrLen] = '\0';
+					if (change)
+					{
+						rpcParams->numberOfBitsOfData = BYTES_TO_BITS(dwStrLen + 8);
+						bsData.SetNumberOfBitsAllocated(rpcParams->numberOfBitsOfData);
+						bsData.SetWriteOffset(32);
+						bsData.Write(dwStrLen);
+						bsData.Write(szMsg, dwStrLen);
+					}
+				}
 
-				if (cheat_state->_generic.chatcolors == 1)
+				if (A_Set.bChatcolor)
 				{
 					if (D3DCOLOR_COMPARE(dwColor, 217, 119, 0))
 					{
-						if (set.chatcolors_report && strstr(szMsg, "������ �� ") && strstr(szMsg, " �� "))
+						if (A_Set.bChatcolorsReport && strstr(szMsg, "Жалоба от ") && strstr(szMsg, " на "))
 						{
-							changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rreport, set.greport, set.breport), dwStrLen, szMsg);
+							changeColorClientMsg(&bsData, D3DCOLOR_RGBX(A_Set.dwColorReport), dwStrLen, szMsg);
 							break;
 						}
 						else
-							if (set.chatcolors_feedback && strstr(szMsg, "������ ��"))
+                            if (A_Set.bChatcolorsFeedback && strstr(szMsg, "Репорт от"))
 							{
-								changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rfeedback, set.gfeedback, set.bfeedback), dwStrLen, szMsg);
+                                changeColorClientMsg(&bsData, D3DCOLOR_RGBX(A_Set.dwColorFeedback), dwStrLen, szMsg);
 								break;
 							}
 							else
-								if (set.chatcolors_reportr && strstr(szMsg, "<-����� �"))
+                                if (A_Set.bChatcolorsReportr && strstr(szMsg, "<-Ответ К"))
 								{
-									changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rreportr, set.greportr, set.breportr), dwStrLen, szMsg);
+                                    changeColorClientMsg(&bsData, D3DCOLOR_RGBX(A_Set.dwColorReportr), dwStrLen, szMsg);
 									break;
 								}
 					}
 					else
 						if (D3DCOLOR_COMPARE(dwColor, 255, 165, 0))
 						{
-							if (set.chatcolors_support)
+                            if (A_Set.bChatcolorsSupport)
 								if (strstr(szMsg, "<SUPPORT-CHAT> ") || strstr(szMsg, "<-") && strstr(szMsg, " to ")
-									&& strstr(szMsg, ": ") || strstr(szMsg, "->������") && strstr(szMsg, ": "))
+									&& strstr(szMsg, ": ") || strstr(szMsg, "->Вопрос") && strstr(szMsg, ": "))
 								{
-									changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rsupport, set.gsupport, set.bsupport), dwStrLen, szMsg);
+                                    changeColorClientMsg(&bsData, D3DCOLOR_RGBX(A_Set.dwColorSupport), dwStrLen, szMsg);
 									break;
 								}
 						}
 						else
 							if (D3DCOLOR_COMPARE(dwColor, 255, 255, 0))
 							{
-								if (set.chatcolors_sms)
-									if (strstr(szMsg, "SMS: ") && (strstr(szMsg, "�����������: ") || strstr(szMsg, "����������: ")))
+                                if (A_Set.bChatcolorsSms)
+									if (strstr(szMsg, "SMS: ") && (strstr(szMsg, "Отправитель: ") || strstr(szMsg, "Получатель: ")))
 									{
-										changeColorClientMsg(&bsData, D3DCOLOR_RGBX(set.rsms, set.gsms, set.bsms), dwStrLen, szMsg);
+                                        changeColorClientMsg(&bsData, D3DCOLOR_RGBX(A_Set.dwColorSms), dwStrLen, szMsg);
 										break;
 									}
 							}
 				}
+
 				break;
 			}
-			case RPC_Chat:
+            case RPC_DeathMessage:
+            {
+                if (isCheatPanicEnabled() || !A_Set.bLogKillList)
+                    break;
+                BitStream		bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8, false);
+
+                int16_t killerId, playerId;
+                int8_t reason;
+
+                bsData.Read(killerId);
+                bsData.Read(playerId);
+                bsData.Read(reason);
+                const char *name = gta_weapon_name(reason);
+                adminLog(A_Set.fLogKillList, "KILLER: %s[%hd] || PLAYER: %s[%hd] || GUN: %s", killerId == -1 ? "None" : getPlayerName(killerId), killerId, getPlayerName(playerId), playerId, name);
+                break;
+            }
+			case RPC_PlayerSpectatePlayer:
 			{
-				if (isCheatPanicEnabled() || !set.anti_spam && !set.chatbox_logging) break;
-
-				BitStream		bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8, false);
-				static char		last_clientmsg[SAMP_MAX_PLAYERS][256];
-				static DWORD	allow_show_again = 0;
-				uint16_t		playerId = uint16_t(-1);
-				uint8_t			byteTextLen;
-				char			szText[256];
-
-				if (cheat_state->_generic.cheat_panic_enabled)
-					break;
-
-				bsData.Read(playerId);
-				if (isBadSAMPPlayerID(playerId))
-					break;
-
-				bsData.Read(byteTextLen);
-				bsData.Read(szText, byteTextLen);
-				szText[byteTextLen] = '\0';
-
-				if (set.anti_spam && ((strcmp(last_clientmsg[playerId], szText) == 0 && GetTickCount() < allow_show_again) || (g_iNumPlayersMuted > 0 && g_bPlayerMuted[playerId])))
-					return; // exit without processing rpc
-
-				// nothing to copy anymore, after chatbox_logging, so copy this before
-				strncpy_s(last_clientmsg[playerId], szText, sizeof(last_clientmsg[playerId]) - 1);
-
-				if (set.chatbox_logging)
-					LogChatbox(false, "%s: %s", getPlayerName(playerId), szText);
-				allow_show_again = GetTickCount() + 5000;
+				BitStream		bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8 + 1, false);
+				bsData.Read(A_Set.reconID);
 				break;
 			}
+            case RPC_ServerJoin:
+            {
+                BitStream		bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8, false);
+                uint16_t playerId;
+                BYTE byteNameLen;
+                char szPlayerName[24];
+
+                bsData.Read(playerId);
+                if (playerId > SAMP_MAX_PLAYERS)
+                    return;
+
+                bsData.IgnoreBits(40);//color(dword) + npc_byte(byte)
+                bsData.Read(byteNameLen);
+                if (byteNameLen > 20) return;
+                bsData.Read(szPlayerName, byteNameLen);
+                szPlayerName[byteNameLen] = '\0';
+
+
+
+                if (A_Set.bConnectLog && !gta_menu_active()) {
+                    A_Set.connectLog.clear();
+                    A_Set.connectLog.append(szPlayerName);
+                    A_Set.connectLog.append("[" + std::to_string(playerId) + "]");
+                    A_Set.connectLog.append(" подключается к серверу.");
+                    A_Set.connectTime = time_get();
+                }
+				if (!A_Set.AdminChecker.empty()) {
+					if (std::find(A_Set.AdminChecker.cbegin(), A_Set.AdminChecker.cend(), szPlayerName) != A_Set.AdminChecker.cend()) {
+						addOnlineAdmin(playerId, szPlayerName);
+						break;
+					}
+				}
+
+				if (!A_Set.PlayerChecker.empty()) {
+					std::vector<std::pair<std::string, std::string> >::const_iterator it;
+					if ((it = std::find_if(A_Set.PlayerChecker.cbegin(), A_Set.PlayerChecker.cend(), [&szPlayerName](const std::pair<std::string, std::string> &pair) {return (pair.first == szPlayerName); })) != A_Set.PlayerChecker.cend()) {
+						addOnlinePlayer(playerId, szPlayerName, it->second.c_str());
+					}
+				}
+                break;
+            }
+            case RPC_ServerQuit:
+            {
+
+                BitStream		bsData(rpcParams->input, rpcParams->numberOfBitsOfData / 8 + 1, false);
+                uint16_t playerId;
+
+                bsData.Read(playerId);
+
+                if (playerId > g_Players->ulMaxPlayerID) return;
+
+                const char	*szPlayerName = getPlayerName(playerId);
+
+                if (A_Set.bDisconnectLog && !gta_menu_active()) {
+                    A_Set.disconnectLog.clear();
+                    A_Set.disconnectLog.append(szPlayerName);
+                    A_Set.disconnectLog.append("[" + std::to_string(playerId) + "]");
+                    A_Set.disconnectLog.append(" отключился от сервера.");
+                    A_Set.disconnectTime = time_get();
+                }
+				if (!deleteFromOnlineList(A_Set.AdminsOnline, A_Set.aCheckerMsg, playerId, szPlayerName))
+					deleteFromOnlineList(A_Set.PlayersOnline, A_Set.pCheckerMsg, playerId, szPlayerName);
+                break;
+            }
 		} // switch
 	}
 	callback(rpcParams);
@@ -389,8 +538,6 @@ bool OnSendRPC(int uniqueID, BitStream *parameters, PacketPriority priority, Pac
 		parameters->Read(szText, byteTextLen);
 		szText[byteTextLen] = '\0';
 
-		if (set.chatbox_logging)
-			LogChatbox(false, "%s: %s", getPlayerName(g_Players->sLocalPlayerID), szText);
 	}
 
 	// prevent invulnerability detection
@@ -434,13 +581,23 @@ bool OnReceivePacket(Packet *p)
 {
 	if (p->data == nullptr || p->length == 0)
 		return true;
+
+	if (p->data[0] == ID_AUTH_KEY) {
+		A_Set.AdminsOnline.clear();
+		A_Set.aCheckerMsg = "\nНет админов в сети";
+		A_Set.pCheckerMsg.clear();
+		A_Set.pCheckerMsg = "\nНет игроков в сети";
+	}
+
 	if (!isCheatPanicEnabled())
 	{
 		if (set.netPatchAssoc[p->data[0]][INCOMING_PACKET] != nullptr && set.netPatchAssoc[p->data[0]][INCOMING_PACKET]->enabled)
 			return false;
 	}
+    traceLastFunc("OnReceivePacket");
 	if (p->data[0] == ID_MARKERS_SYNC) // packetId
 	{
+        traceLastFunc("OnReceivePacket::MARKER");
 		BitStream	bs(p->data, p->length, false);
 		int			iNumberOfPlayers = 0;
 		uint16_t	playerID = uint16_t(-1);
@@ -465,7 +622,101 @@ bool OnReceivePacket(Packet *p)
 			g_stStreamedOutInfo.fPlayerPos[playerID][2] = sPos[2];
 		}
 	}
+	else
+		if (p->data[0] == ID_PLAYER_SYNC)
+		{
+            traceLastFunc("OnReceivePacket::PLAYER");
+			BitStream	bsData(p->data, p->length, false);
+			static DWORD dwTime[SAMP_MAX_PLAYERS], dwTimeGM;
+			bsData.ResetReadPointer();
+			short pId;
+			bool bVal;
+			float fVec;
+			short surf_id = -1;
+			float fpos[3];
+			bsData.IgnoreBits(8);
+
+			bsData.Read(pId);
+			bsData.Read(bVal);
+			if (bVal)
+				bsData.IgnoreBits(16);
+			bsData.Read(bVal);
+			if (bVal)
+				bsData.IgnoreBits(16);
+			bsData.IgnoreBits(16);
+			bsData.Read(fpos);
+			bsData.IgnoreBits(76);
+			bsData.Read(fVec);
+			if (fVec != 0.f)
+			bsData.IgnoreBits(48);
+			bsData.Read(bVal);
+			if (bVal)
+			{
+				bsData.Read(surf_id);
+				if (surf_id == 1 && GetTickCount() - dwTimeGM > 3000)
+				{
+					float offs = g_Players->pRemotePlayer[pId]->pPlayerData->pSAMP_Actor->pGTA_Ped->base.matrix[14] - fpos[2];
+					if (abs(offs - 15) < 0.6 || abs(offs - 175) < 0.6)
+					{
+						addMessageToChatWindowWarning("<Warning> Игрок: %s[%d] использует паблик ГМ.", getPlayerName(pId), pId);
+						dwTimeGM = GetTickCount();
+                        return true;
+					}
+				}
+				int fOffs[3];
+				bsData.Read(fOffs);
+				if (surf_id != -1 && (fOffs[0] >= 0xFF800000 || fOffs[1] >= 0xFF800000 || fOffs[2] >= 0xFF800000))
+				{
+					if (GetTickCount() - dwTime[pId] > 15000)
+					{
+						addMessageToChatWindowWarning("<Warning>  Игрок: %s[%d] использует крашер.", getPlayerName(pId), pId);
+						dwTime[pId] = GetTickCount();
+					}
+					bsData.SetWriteOffset(bsData.GetReadOffset() - 112);
+					bsData.Write((short)0);
+					bsData.Write((float)0.0f);
+					bsData.Write((float)0.0f);
+					bsData.Write((float)0.0f);
+				}
+			}
+		}
+		else
+			if (A_Set.bTraces && p->data[0] == ID_BULLET_SYNC)
+			{
+                traceLastFunc("OnReceivePacket::BULLET");
+				BitStream	bsData(p->data, p->length, false);
+				bsData.ResetReadPointer();
+				bsData.IgnoreBits(8);
+				if (!A_Set.bTraceAll)
+				{
+					USHORT pID;
+					bsData.Read(pID);
+					if (pID != A_Set.usTraceID)
+						return true;
+				}
+				else
+					bsData.IgnoreBits(16);
+				if (A_Set.Tracers.size() >= A_Set.usTraceMaxCount)
+				{
+					A_Set.Tracers.pop_back();
+				}
+				stBulletData data;
+				memset(&data, 0, sizeof(stBulletData));
+				bsData.Read((PCHAR)&data, sizeof(stBulletData));
+				A_Set.Tracers.insert(A_Set.Tracers.begin(), Trace(data.fOrigin, data.fTarget, (data.byteType == 1 ? A_Set.dwColorTracerHit : A_Set.dwColorTracer), GetTickCount()));
+			}
 	return true;
+}
+
+void cmd_pickup(char *params)
+{
+	if (!strlen(params))
+	{
+		addMessageToChatWindow("USAGE: /mod_pickup <pickup id>");
+		return;
+	}
+
+	g_RakClient->SendPickUp(atoi(params));
 }
 
 void cmd_warp(char *params)
@@ -511,22 +762,6 @@ void cmd_showCMDS(char *)
 	}
 }
 
-void hook(char*)
-{
-	//��������: ��-�� ������ � �� ��� �� ���������
-	if (hhKeyKook == nullptr)
-	{
-		hhKeyKook = SetWindowsHookExA(WH_KEYBOARD_LL, LLKeyProc, NULL, 0);
-		if (hhKeyKook == nullptr)
-			MessageBoxA(0, std::string("Error " + std::to_string(GetLastError())).c_str(), "!!!!!!!!!", MB_OKCANCEL);
-	}
-	else
-	{
-		if (UnhookWindowsHookEx(hhKeyKook))
-			hhKeyKook = nullptr;
-	}
-}
-
 void initChatCmds(void)
 {
 	if (g_m0dCommands == true)
@@ -537,5 +772,4 @@ void initChatCmds(void)
 
 	addClientCommand("mod_show_cmds", cmd_showCMDS);
 	addClientCommand("mod_warp", cmd_warp);
-	addClientCommand("change_keys", hook);
 }

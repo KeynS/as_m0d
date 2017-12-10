@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 	PROJECT:		mod_sa
 	LICENSE:		See LICENSE in the top level directory
@@ -423,6 +423,7 @@ HRESULT CD3DFont::Invalidate ()
 	//SAFE_RELEASE(m_pD3DstateDraw);
 	//SAFE_RELEASE(m_pD3DstateNorm);
 	m_pRender->Invalidate();
+	//delete m_pRender;
 
 	//CD3DBaseRender::Invalidate();
 	return S_OK;
@@ -560,6 +561,11 @@ HRESULT CD3DFont::PrintShadow ( float x, float y, DWORD color, const char *szTex
 	return Print(szText, color, x, y, false, false);
 }
 
+HRESULT CD3DFont::PrintWithoutShadow(float x, float y, DWORD color, const char *szText)
+{
+	return Print(szText, color, x, y, false, false);
+}
+
 float CD3DFont::DrawLength ( const char *szText, bool noColorFormat ) const
 {
 	float	len = 0.0f;
@@ -616,7 +622,7 @@ size_t CD3DFont::GetCharPos( const char *text, float x, bool noColorFormat ) con
 	return pos;
 }
 
-CD3DRender::CD3DRender ( int numVertices )
+CD3DRender::CD3DRender ( int numVertices ) //-V730
 {
 	m_canRender = false;
 

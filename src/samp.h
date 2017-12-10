@@ -104,6 +104,7 @@ enum Limits
 	SAMP_ALLOWED_PLAYER_NAME_LENGTH = 20,
 };
 
+
 enum ChatMessageType
 {
 	CHAT_TYPE_NONE = 0,
@@ -1055,6 +1056,7 @@ int												samp_vehicle_find_nearest(int flags);
 void											addClientCommand(char *text, CMDPROC function);
 void											addToChatWindow(char *text, D3DCOLOR textColor, int playerID = -1);
 void											addMessageToChatWindow(const char *text, ...);
+void                                            addMessageToChatWindowWarning(const char *text, ...);
 void											addMessageToChatWindowSS(const char *text, ...);
 void											restartGame();
 void											addSayToChatWindow(char *msg);

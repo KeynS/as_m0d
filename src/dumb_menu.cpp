@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 	PROJECT:		mod_sa
 	LICENSE:		See LICENSE in the top level directory
@@ -25,12 +25,10 @@
 #define ID_NONE					- 1
 
 #define ID_MENU_MAIN			0
-#define ID_MENU_ADMINTOOLS      181 
 #define ID_MENU_CHEATS			1
 #define ID_MENU_CHEATS_INVULN	1
 #define ID_MENU_CHEATS_MONEY	2
 #define ID_MENU_CHEATS_MODS		135
-#define ID_MENU_CHAT            147
 #define ID_MENU_CHEATS_WEATHER	5
 #define ID_MENU_CHEATS_TIME		6
 #define ID_MENU_CHEATS_HANDLING 111
@@ -51,8 +49,57 @@
 #define ID_MENU_SERVER_LIST		21
 #define ID_MENU_HUDINDICATORS	22
 #define ID_MENU_INTERIORS		23
-#define ID_CHATCOLOURS			65
-#define ID_MENU_ADMINS			66
+
+#define ID_MENU_ADMINTOOLS              181
+#define ID_MENU_CHAT                    147
+#define ID_CHATCOLOURS                  65
+#define ID_MENU_ADMINS                  66
+#define ID_TRACE                        67
+#define ID_ADMIN_SETTINGS               68
+#define ID_CHATID                       69
+#define ID_CHATLOGBAN                   70
+#define ID_CHATLOGWARN                  71
+#define ID_COLORSETTING_SMS_ENABLE      72
+#define ID_COLORSETTING_SMS_R           73
+#define ID_COLORSETTING_SMS_G           74
+#define ID_COLORSETTING_SMS_B           75
+#define ID_COLORSETTING_REPORT_ENABLE   76
+#define ID_COLORSETTING_REPORT_R        77
+#define ID_COLORSETTING_REPORT_G        78
+#define ID_COLORSETTING_REPORT_B        79
+#define ID_COLORSETTING_REPORTR_ENABLE  80
+#define ID_COLORSETTING_REPORTR_R       81
+#define ID_COLORSETTING_REPORTR_G       82
+#define ID_COLORSETTING_REPORTR_B       83
+#define ID_COLORSETTING_FEEDBACK_ENABLE 84
+#define ID_COLORSETTING_FEEDBACK_R      85
+#define ID_COLORSETTING_FEEDBACK_G      86
+#define ID_COLORSETTING_FEEDBACK_B      87
+#define ID_COLORSETTING_SUPPORT_ENABLE  88
+#define ID_COLORSETTING_SUPPORT_R       89
+#define ID_COLORSETTING_SUPPORT_G       90
+#define ID_COLORSETTING_SUPPORT_B       91
+#define ID_TRACE_TIME                   92
+#define ID_TRACE_COUNT                  93
+#define ID_TRACE_COLOR_R                94
+#define ID_TRACE_COLOR_G                95
+#define ID_TRACE_COLOR_B                96
+#define ID_TRACE_COLOR_HIT_R            97
+#define ID_TRACE_COLOR_HIT_G            98
+#define ID_TRACE_COLOR_HIT_B            99
+#define ID_COLORSETTING_SAVE_BUTTON     100
+#define ID_CONNECT_LOG                  101
+#define ID_DISCONNECT_LOG               102
+#define ID_FONT_HEIGHT                  103
+#define ID_FONT_NAME                    104
+#define ID_ADMIN_CHAT					105
+#define ID_ADMIN_TRACE					106
+#define ID_COLORSETTING_HUD_R			107
+#define ID_COLORSETTING_HUD_G			108
+#define ID_COLORSETTING_HUD_B			109
+#define ID_COLOR_HUD					110
+#define ID_FONT_TAGS					111
+#define ID_SETTING_KEYS					112
 
 #ifdef __CHEAT_VEHRECORDING_H__
 #define ID_MENU_ROUTES			26
@@ -1188,7 +1235,7 @@ static int menu_callback_cheats ( int op, struct menu_item *item )
 		case ID_CHEAT_MODS:
 			return 0;
 
-	   case ID_MENU_ADMINS:
+		case ID_MENU_ADMINS:
 			return 0;
 
 		case ID_CHEAT_PROT:
@@ -2471,29 +2518,515 @@ static int menu_callback_specialaction ( int op, struct menu_item *item )
 	return 0;
 }
 
-static int menu_callback_admintools ( int op, struct menu_item *item )
+static int menu_callback_admintools(int op, struct menu_item *item)
 {
-    switch ( op )
-    {
+	switch (op)
+	{
 	case MENU_OP_ENABLED:
-		switch ( item->id )
-        {
-			case ID_CHATCOLOURS:
-			return cheat_state->_generic.chatcolors;
-        }
-        break;
+		switch (item->id)
+		{
+        case ID_TRACE:
+            return A_Set.bTraces;
+        case ID_CHATLOGBAN:
+            return A_Set.bLogBan;
+        case ID_CHATLOGWARN:
+            return A_Set.bLogWarn;
+        case ID_CONNECT_LOG:
+            return A_Set.bConnectLog;
+        case ID_DISCONNECT_LOG:
+            return A_Set.bDisconnectLog;
+		}
+		break;
 
-    case MENU_OP_SELECT:
-        switch ( item->id )
-        {
-			case ID_CHATCOLOURS:
-				cheat_state->_generic.chatcolors ^= 1;
-				break;
-        }
-    }
-    return 0;
+	case MENU_OP_SELECT:
+		switch (item->id)
+		{
+        case ID_TRACE:
+            A_Set.bTraces ^= true;
+            break;
+        case ID_CHATLOGBAN:
+            A_Set.bLogBan ^= true;
+            break;
+        case ID_CHATLOGWARN:
+            A_Set.bLogWarn ^= true;
+            break;
+        case ID_CONNECT_LOG:
+            A_Set.bConnectLog ^= true;
+            break;
+        case ID_DISCONNECT_LOG:
+            A_Set.bDisconnectLog ^= true;
+            break;
+		}
+	}
+	return 0;
 }
 
+enum RGB
+{
+    BLUE = 0,
+    GREEN = 1,
+    RED = 2
+};
+
+enum ColorSettingCode : uint16_t
+{
+    SMS,
+    REPORT,
+    REPORTR,
+    FEEDBACK,
+    SUPPORT,
+    TRACER,
+    TRACERHIT,
+	HUD
+};
+
+static void colorChange(DWORD &sourceColor, RGB offset, int mod, struct menu_item *item)
+{
+    uint8_t &retColor = *((uint8_t*)&sourceColor + offset);
+    if (mod == -1 && retColor > 0) {
+        --retColor;
+    }
+    else if (mod == 1 && retColor < 255) {
+        ++retColor;
+    }
+
+    switch (offset)
+    {
+    case BLUE:
+        item->color = (item - 1)->color = (item - 2)->color = sourceColor;
+        menu_item_name_set(item, "Color B       %02X", retColor);
+        break;
+    case GREEN:
+        item->color = (item - 1)->color = (item + 1)->color = sourceColor;
+        menu_item_name_set(item, "Color G       %02X", retColor);
+        break;
+    case RED:
+        item->color = (item + 1)->color = (item + 2)->color = sourceColor;
+        menu_item_name_set(item, "Color R       %02X", retColor);
+        break;
+    }
+    /*case ID_TRACE_COLOR_R: {
+    static uint8_t &redColor = *((uint8_t*)&A_Set.dwColorTracer + 2);
+    if (mod == -1 && redColor > 0) {
+    --redColor;
+    }
+    else if (mod == 1 && redColor < 255) {
+    ++redColor;
+    }
+    else break;
+    item->color = (item + 1)->color = (item + 2)->color = A_Set.dwColorTracer;
+    menu_item_name_set(item, "Color R       %02X", redColor);
+    break; }
+    case ID_TRACE_COLOR_G: {
+    static uint8_t &greenColor = *((uint8_t*)&A_Set.dwColorTracer + 1);
+    if (mod == -1 && greenColor > 0) {
+    --greenColor;
+    }
+    else if (mod == 1 && greenColor < 255) {
+    ++greenColor;
+    }
+    else break;
+    item->color = (item + 1)->color = (item - 1)->color = A_Set.dwColorTracer;
+    menu_item_name_set(item, "Color G       %02X", greenColor);
+    break; }
+    case ID_TRACE_COLOR_B: {
+    static uint8_t &blueColor = *((uint8_t*)&A_Set.dwColorTracer);
+    if (mod == -1 && blueColor > 0) {
+    --blueColor;
+    }
+    else if (mod == 1 && blueColor < 255) {
+    ++blueColor;
+    }
+    else break;
+    item->color = (item - 1)->color = (item - 2)->color = A_Set.dwColorTracer;
+    menu_item_name_set(item, "Color B       %02X", blueColor);
+    break; }*/
+}
+
+static void saveColor(const char *section, const char *key, DWORD color)
+{
+    char szColor[8];
+    sprintf_s(szColor, sizeof(szColor), "%06X", color & 0x00FFFFFF);
+    A_Ini.SetString(section, key, szColor) ? addMessageToChatWindow("Сolor save!") : addMessageToChatWindow("Сolor dont save!");
+}
+
+static int menu_callback_adminsetting(int op, struct menu_item *item)
+{
+	int mod;
+	switch (op)
+	{
+	case MENU_OP_ENABLED:
+		switch (item->id)
+		{
+        case ID_FONT_NAME:
+            menu_item_name_set(item, "Название шрифта: %s", A_Set.fontName.c_str());
+            return 0;
+		}
+		break;
+
+	case MENU_OP_SELECT:
+		switch (item->id)
+		{
+        case ID_COLORSETTING_SMS_ENABLE:
+            A_Set.bChatcolorsSms = A_Ini.XorBoolean("ControlColors", "sms");//^= true; 
+            break;
+        case ID_COLORSETTING_FEEDBACK_ENABLE:
+            A_Set.bChatcolorsFeedback = A_Ini.XorBoolean("ControlColors", "feedback");//^= true;
+            break;
+        case ID_COLORSETTING_REPORTR_ENABLE:
+            A_Set.bChatcolorsReportr = A_Ini.XorBoolean("ControlColors", "reportr");//^= true;
+            break;
+        case ID_COLORSETTING_REPORT_ENABLE:
+            A_Set.bChatcolorsReport = A_Ini.XorBoolean("ControlColors", "report");//^= true;
+            break;
+        case ID_COLORSETTING_SUPPORT_ENABLE:
+            A_Set.bChatcolorsSupport = A_Ini.XorBoolean("ControlColors", "support");//^= true;
+            break;
+        case ID_COLORSETTING_SAVE_BUTTON:
+            switch (int16_t(item->data))
+            {
+            case ColorSettingCode::TRACER:
+                saveColor("Tracer", "color_tracer", A_Set.dwColorTracer);
+                break;
+            case ColorSettingCode::TRACERHIT:
+                saveColor("Tracer", "color_tracer_hit", A_Set.dwColorTracerHit);
+                break;
+            }
+            break;
+		}
+		break;
+
+	case MENU_OP_DEC:
+	case MENU_OP_INC:
+		mod = (op == MENU_OP_DEC) ? -1 : 1;
+        switch (item->id)
+        {
+        case ID_TRACE_TIME:
+            if (mod == -1 && A_Set.dwTraceTimer > 1500)
+                A_Set.dwTraceTimer -= 100;
+            else if (mod == 1)
+                A_Set.dwTraceTimer += 100;
+            else
+                break;
+            menu_item_name_set(item, "Время продолжительности трейсера: %u ms", A_Set.dwTraceTimer);
+            A_Ini.SetInt("Tracer", "TraceTime_ms", A_Set.dwTraceTimer);
+            break;
+        case ID_TRACE_COUNT:
+            if (mod == -1 && A_Set.usTraceMaxCount > 15)
+                --A_Set.usTraceMaxCount;
+            else if (mod == 1)
+                ++A_Set.usTraceMaxCount;
+            else
+                break;
+            menu_item_name_set(item, "Максимальное кол-во трейсеров: %hu", A_Set.usTraceMaxCount);
+            A_Ini.SetInt("Tracer", "TraceMaxCount", A_Set.usTraceMaxCount);
+            break;
+        case ID_TRACE_COLOR_R:
+            colorChange(A_Set.dwColorTracer, RGB::RED, mod, item);
+            break;
+        case ID_TRACE_COLOR_G:
+            colorChange(A_Set.dwColorTracer, RGB::GREEN, mod, item);
+            break;
+        case ID_TRACE_COLOR_B:
+            colorChange(A_Set.dwColorTracer, RGB::BLUE, mod, item);
+            break;
+        case ID_TRACE_COLOR_HIT_R:
+            colorChange(A_Set.dwColorTracerHit, RGB::RED, mod, item);
+            break;
+        case ID_TRACE_COLOR_HIT_G:
+            colorChange(A_Set.dwColorTracerHit, RGB::GREEN, mod, item);
+            break;
+        case ID_TRACE_COLOR_HIT_B:
+            colorChange(A_Set.dwColorTracerHit, RGB::BLUE, mod, item);
+            break;
+        case ID_FONT_HEIGHT:
+            if ((mod == -1 && A_Set.byteFontHeight > 6) || (mod == 1 && A_Set.byteFontHeight < 28)) {
+                A_Set.byteFontHeight += mod;
+                /*delete pD3DFont;
+                pD3DFont = new CD3DFont(A_Set.fontName.c_str(), A_Set.byteFontHeight, FCR_BORDER);
+                pD3DFont->Initialize(origIDirect3DDevice9);*/
+                setFontParams(&pD3DFont, A_Set.fontName.c_str(), A_Set.byteFontHeight);
+                A_Ini.SetInt("FontSetting", "MainHeight", A_Set.byteFontHeight);
+                menu_item_name_set(item, "Размер шрифта  %hhu", A_Set.byteFontHeight);
+            }
+            break;
+		case ID_FONT_TAGS:
+			if ((mod == -1 && A_Set.tags > 1) || (mod == 1 && A_Set.tags < 4)) {
+				A_Set.tags += mod;
+				/*delete pD3DFont;
+				pD3DFont = new CD3DFont(A_Set.fontName.c_str(), A_Set.byteFontHeight, FCR_BORDER);
+				pD3DFont->Initialize(origIDirect3DDevice9);*/
+				A_Ini.SetInt("Position", "tags", A_Set.tags);
+				menu_item_name_set(item, "Вид тэгов ВХ:  %hhu", A_Set.tags);
+			}
+			break;
+		}
+
+	}
+	return 0;
+}
+
+static int menu_callback_admintrace(int op, struct menu_item *item)
+{
+	int mod;
+	switch (op)
+	{
+	case MENU_OP_ENABLED:
+		switch (item->id)
+		{
+
+		}
+		break;
+
+	case MENU_OP_SELECT:
+		switch (item->id)
+		{
+		case ID_COLORSETTING_SAVE_BUTTON:
+			switch (int16_t(item->data))
+			{
+			case ColorSettingCode::TRACER:
+				saveColor("Tracer", "color_tracer", A_Set.dwColorTracer);
+				break;
+			case ColorSettingCode::TRACERHIT:
+				saveColor("Tracer", "color_tracer_hit", A_Set.dwColorTracerHit);
+				break;
+			}
+			break;
+		}
+		break;
+
+	case MENU_OP_DEC:
+	case MENU_OP_INC:
+		mod = (op == MENU_OP_DEC) ? -1 : 1;
+		switch (item->id)
+		{
+		case ID_TRACE_TIME:
+			if (mod == -1 && A_Set.dwTraceTimer > 1500)
+				A_Set.dwTraceTimer -= 100;
+			else if (mod == 1)
+				A_Set.dwTraceTimer += 100;
+			else
+				break;
+			menu_item_name_set(item, "Время продолжительности трейсера: %u ms", A_Set.dwTraceTimer);
+			A_Ini.SetInt("Tracer", "TraceTime_ms", A_Set.dwTraceTimer);
+			break;
+		case ID_TRACE_COUNT:
+			if (mod == -1 && A_Set.usTraceMaxCount > 15)
+				--A_Set.usTraceMaxCount;
+			else if (mod == 1)
+				++A_Set.usTraceMaxCount;
+			else
+				break;
+			menu_item_name_set(item, "Максимальное кол-во трейсеров: %hu", A_Set.usTraceMaxCount);
+			A_Ini.SetInt("Tracer", "TraceMaxCount", A_Set.usTraceMaxCount);
+			break;
+		case ID_TRACE_COLOR_R:
+			colorChange(A_Set.dwColorTracer, RGB::RED, mod, item);
+			break;
+		case ID_TRACE_COLOR_G:
+			colorChange(A_Set.dwColorTracer, RGB::GREEN, mod, item);
+			break;
+		case ID_TRACE_COLOR_B:
+			colorChange(A_Set.dwColorTracer, RGB::BLUE, mod, item);
+			break;
+		case ID_TRACE_COLOR_HIT_R:
+			colorChange(A_Set.dwColorTracerHit, RGB::RED, mod, item);
+			break;
+		case ID_TRACE_COLOR_HIT_G:
+			colorChange(A_Set.dwColorTracerHit, RGB::GREEN, mod, item);
+			break;
+		case ID_TRACE_COLOR_HIT_B:
+			colorChange(A_Set.dwColorTracerHit, RGB::BLUE, mod, item);
+			break;{
+			}
+			break;
+		}
+
+	}
+	return 0;
+}
+
+
+static int menu_callback_hud(int op, struct menu_item *item)
+{
+	int mod;
+	switch (op)
+	{
+	case MENU_OP_ENABLED:
+		switch (item->id)
+		{
+		}
+		break;
+
+	case MENU_OP_SELECT:
+		switch (item->id)
+		{
+		case ID_COLORSETTING_SAVE_BUTTON:
+			switch (int16_t(item->data))
+			{
+			case ColorSettingCode::HUD:
+				saveColor("Visual", "Enabled", color_enable);
+				break;
+			}
+			break;
+		}
+		break;
+
+	case MENU_OP_DEC:
+	case MENU_OP_INC:
+		mod = (op == MENU_OP_DEC) ? -1 : 1;
+		switch (item->id)
+		{
+		case ID_COLORSETTING_HUD_R:
+			colorChange(color_enable, RGB::RED, mod, item);
+			break;
+		case ID_COLORSETTING_HUD_G:
+			colorChange(color_enable, RGB::GREEN, mod, item);
+			break;
+		case ID_COLORSETTING_HUD_B:
+			colorChange(color_enable, RGB::BLUE, mod, item);
+			break; {
+			}
+			break;
+		}
+
+	}
+	return 0;
+}
+
+
+static int menu_callback_adminchat(int op, struct menu_item *item)
+{
+	int mod;
+	switch (op)
+	{
+	case MENU_OP_ENABLED:
+		switch (item->id)
+		{
+		case ID_COLORSETTING_SMS_ENABLE:
+			return A_Set.bChatcolorsSms;
+		case ID_COLORSETTING_FEEDBACK_ENABLE:
+			return A_Set.bChatcolorsFeedback;
+		case ID_COLORSETTING_REPORTR_ENABLE:
+			return A_Set.bChatcolorsReportr;
+		case ID_CHATID:
+			return A_Set.bChatID;
+		case ID_COLORSETTING_REPORT_ENABLE:
+			return A_Set.bChatcolorsReport;
+		case ID_COLORSETTING_SUPPORT_ENABLE:
+			return A_Set.bChatcolorsSupport;
+		case ID_CHATCOLOURS:
+			return A_Set.bChatcolor;
+		}
+		break;
+
+	case MENU_OP_SELECT:
+		switch (item->id)
+		{
+		case ID_COLORSETTING_SMS_ENABLE:
+			A_Set.bChatcolorsSms = A_Ini.XorBoolean("ControlColors", "sms");//^= true; 
+			break;
+		case ID_COLORSETTING_FEEDBACK_ENABLE:
+			A_Set.bChatcolorsFeedback = A_Ini.XorBoolean("ControlColors", "feedback");//^= true;
+			break;
+		case ID_COLORSETTING_REPORTR_ENABLE:
+			A_Set.bChatcolorsReportr = A_Ini.XorBoolean("ControlColors", "reportr");//^= true;
+			break;
+		case ID_COLORSETTING_REPORT_ENABLE:
+			A_Set.bChatcolorsReport = A_Ini.XorBoolean("ControlColors", "report");//^= true;
+			break;
+		case ID_CHATID:
+			A_Set.bChatID ^= true;
+			break;
+		case ID_COLORSETTING_SUPPORT_ENABLE:
+			A_Set.bChatcolorsSupport = A_Ini.XorBoolean("ControlColors", "support");//^= true;
+			break;
+		case ID_CHATCOLOURS:
+			A_Set.bChatcolor ^= true;
+			break;
+		case ID_COLORSETTING_SAVE_BUTTON:
+			switch (int16_t(item->data))
+			{
+			case ColorSettingCode::HUD:
+				saveColor("Visual", "Enabled", color_enable);
+				break;
+			case ColorSettingCode::SMS:
+				saveColor("Colors", "color_sms", A_Set.dwColorSms);
+				break;
+			case ColorSettingCode::REPORT:
+				saveColor("Colors", "color_report", A_Set.dwColorReport);
+				break;
+			case ColorSettingCode::REPORTR:
+				saveColor("Colors", "color_reportr", A_Set.dwColorReportr);
+				break;
+			case ColorSettingCode::FEEDBACK:
+				saveColor("Colors", "color_feedback", A_Set.dwColorFeedback);
+				break;
+			case ColorSettingCode::SUPPORT:
+				saveColor("Colors", "color_support", A_Set.dwColorSupport);
+				break;
+			}
+			break;
+		}
+		break;
+
+	case MENU_OP_DEC:
+	case MENU_OP_INC:
+		mod = (op == MENU_OP_DEC) ? -1 : 1;
+		switch (item->id)
+		{
+		case ID_COLORSETTING_SMS_R:
+			colorChange(A_Set.dwColorSms, RGB::RED, mod, item);
+			break;
+		case ID_COLORSETTING_SMS_G:
+			colorChange(A_Set.dwColorSms, RGB::GREEN, mod, item);
+			break;
+		case ID_COLORSETTING_SMS_B:
+			colorChange(A_Set.dwColorSms, RGB::BLUE, mod, item);
+			break;
+		case ID_COLORSETTING_REPORT_R:
+			colorChange(A_Set.dwColorReport, RGB::RED, mod, item);
+			break;
+		case ID_COLORSETTING_REPORT_G:
+			colorChange(A_Set.dwColorReport, RGB::GREEN, mod, item);
+			break;
+		case ID_COLORSETTING_REPORT_B:
+			colorChange(A_Set.dwColorReport, RGB::BLUE, mod, item);
+			break;
+		case ID_COLORSETTING_REPORTR_R:
+			colorChange(A_Set.dwColorReportr, RGB::RED, mod, item);
+			break;
+		case ID_COLORSETTING_REPORTR_G:
+			colorChange(A_Set.dwColorReportr, RGB::GREEN, mod, item);
+			break;
+		case ID_COLORSETTING_REPORTR_B:
+			colorChange(A_Set.dwColorReportr, RGB::BLUE, mod, item);
+			break;
+		case ID_COLORSETTING_FEEDBACK_R:
+			colorChange(A_Set.dwColorFeedback, RGB::RED, mod, item);
+			break;
+		case ID_COLORSETTING_FEEDBACK_G:
+			colorChange(A_Set.dwColorFeedback, RGB::GREEN, mod, item);
+			break;
+		case ID_COLORSETTING_FEEDBACK_B:
+			colorChange(A_Set.dwColorFeedback, RGB::BLUE, mod, item);
+			break;
+		case ID_COLORSETTING_SUPPORT_R:
+			colorChange(A_Set.dwColorSupport, RGB::RED, mod, item);
+			break;
+		case ID_COLORSETTING_SUPPORT_G:
+			colorChange(A_Set.dwColorSupport, RGB::GREEN, mod, item);
+			break;
+		case ID_COLORSETTING_SUPPORT_B:
+			colorChange(A_Set.dwColorSupport, RGB::BLUE, mod, item);
+			break; {
+			}
+			break;
+		}
+
+	}
+	return 0;
+}
 
 static int menu_callback_hudindicators ( int op, struct menu_item *item )
 {
@@ -2513,23 +3046,11 @@ static int menu_callback_hudindicators ( int op, struct menu_item *item )
 		case ID_HUDIND_WEAPON:
 			return set.hud_indicator_weapon;
 
-		case ID_HUDIND_MONEY:
-			return set.hud_indicator_money;
-
 		case ID_HUDIND_FREEZE:
 			return set.hud_indicator_freeze;
 
 		case ID_HUDIND_INVEH_AIRBRK:
 			return set.hud_indicator_inveh_airbrk;
-
-		case ID_HUDIND_INVEH_STICK:
-			return set.hud_indicator_inveh_stick;
-
-		case ID_HUDIND_INVEH_BRKDANCE:
-			return set.hud_indicator_inveh_brkdance;
-
-		case ID_HUDIND_INVEH_SPIDER:
-			return set.hud_indicator_inveh_spider;
 
 		case ID_HUDIND_ONFOOT_FLY:
 			return set.hud_indicator_onfoot_fly;
@@ -2540,26 +3061,11 @@ static int menu_callback_hudindicators ( int op, struct menu_item *item )
 		case ID_HUDIND_ONFOOT_AIRBRK:
 			return set.hud_indicator_onfoot_airbrk;
 
-		case ID_HUDIND_ONFOOT_STICK:
-			return set.hud_indicator_onfoot_stick;
-
-		case ID_HUDIND_ONFOOT_AIM:
-			return set.hud_indicator_onfoot_aim;
-
 		case ID_HUDIND_POS:
 			return set.hud_indicator_pos;
 
 		case ID_HUDIND_FPS:
 			return set.hud_fps_draw;
-
-		case ID_HUDIND_LB_BARS:
-			return set.left_bottom_bars_enable;
-
-		case ID_HUDIND_SURF:
-			return set.hud_indicator_surf;
-
-		case ID_HUDIND_FREEZEROT:
-			return set.hud_indicator_freezerot;
 		}
 
 		return 0;
@@ -2585,28 +3091,12 @@ static int menu_callback_hudindicators ( int op, struct menu_item *item )
 			set.hud_indicator_weapon ^= 1;
 			break;
 
-		case ID_HUDIND_MONEY:
-			set.hud_indicator_money ^= 1;
-			break;
-
 		case ID_HUDIND_FREEZE:
 			set.hud_indicator_freeze ^= 1;
 			break;
 
 		case ID_HUDIND_INVEH_AIRBRK:
 			set.hud_indicator_inveh_airbrk ^= 1;
-			break;
-
-		case ID_HUDIND_INVEH_STICK:
-			set.hud_indicator_inveh_stick ^= 1;
-			break;
-
-		case ID_HUDIND_INVEH_BRKDANCE:
-			set.hud_indicator_inveh_brkdance ^= 1;
-			break;
-
-		case ID_HUDIND_INVEH_SPIDER:
-			set.hud_indicator_inveh_spider ^= 1;
 			break;
 
 		case ID_HUDIND_ONFOOT_FLY:
@@ -2621,32 +3111,12 @@ static int menu_callback_hudindicators ( int op, struct menu_item *item )
 			set.hud_indicator_onfoot_airbrk ^= 1;
 			break;
 
-		case ID_HUDIND_ONFOOT_STICK:
-			set.hud_indicator_onfoot_stick ^= 1;
-			break;
-
-		case ID_HUDIND_ONFOOT_AIM:
-			set.hud_indicator_onfoot_aim ^= 1;
-			break;
-
 		case ID_HUDIND_POS:
 			set.hud_indicator_pos ^= 1;
 			break;
 
 		case ID_HUDIND_FPS:
 			set.hud_fps_draw ^= 1;
-			break;
-
-		case ID_HUDIND_LB_BARS:
-			set.left_bottom_bars_enable ^= 1;
-			break;
-
-		case ID_HUDIND_SURF:
-			set.hud_indicator_surf ^= 1;
-			break;
-
-		case ID_HUDIND_FREEZEROT:
-			set.hud_indicator_freezerot ^= 1;
 			break;
 
 		default:
@@ -2817,6 +3287,23 @@ static int menu_callback_netpatches(int op, struct menu_item *item)
 	return 0;
 }
 
+inline void addColorItems(struct menu *menu, DWORD &color, int startID)
+{
+    char name[32];
+    snprintf(name, sizeof(name), "Color R       %02X", (color >> 16) & 0xFF);
+    menu_item_add(menu, NULL, name, startID, color, NULL);
+    snprintf(name, sizeof(name), "Color G       %02X", (color >> 8) & 0xFF);
+    menu_item_add(menu, NULL, name, startID + 1, color, NULL);
+    snprintf(name, sizeof(name), "Color B       %02X", color & 0xFF);
+    menu_item_add(menu, NULL, name, startID + 2, color, NULL);
+}
+
+inline void addSaveButton(struct menu *menu, ColorSettingCode code)
+{
+    menu_item_add(menu, NULL, "\t  >>>  Save color in ini file <<<", ID_COLORSETTING_SAVE_BUTTON, 0xFFFFFF00, (void*)code);
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// FUNCTIONS DONE ///////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -2827,7 +3314,7 @@ void menu_maybe_init ( void )
 	traceLastFunc( "menu_maybe_init()" );
 	if ( menu_init )
 		return;
-	
+
 	struct menu *menu_main, *menu_cheats, *menu_admintool, *menu_cheats_mods, *menu_chat_colors, *menu_cheats_inv, *
 		menu_cheats_weather, *menu_cheats_time, *menu_weapons, *menu_vehicles, *
 			menu_misc, *menu_hudindicators, *menu_patches, *menu_players, *
@@ -2837,9 +3324,11 @@ void menu_maybe_init ( void )
 #endif
 
 	//*menu_cheats_handling,
-	*menu_player_info, *menu_players_mute, *menu_sampmisc, *menu_spoof_weapon, *menu_vehicles_instant, 
+	*menu_player_info, *menu_players_mute, *menu_sampmisc, *menu_spoof_weapon, *menu_vehicles_instant,
 	*menu_gamestate, *menu_specialaction, *menu_teleobject, *menu_telepickup, *menu_samppatches,
-	*menu_netpatches_inrpc, *menu_netpatches_outrpc, *menu_netpatches_inpacket, *menu_netpatches_outpacket;
+	*menu_netpatches_inrpc, *menu_netpatches_outrpc, *menu_netpatches_inpacket, *menu_netpatches_outpacket,
+	*menu_admin_setting, *menu_admin_chat, *menu_admin_trace, *menu_color_sms_setting, *menu_color_hud, *menu_color_enable_setting, *menu_color_report_setting, *menu_color_reportr_setting,
+	*menu_color_feedback_setting, *menu_color_support_setting, *menu_color_trace_setting, *menu_color_trace_hit_setting;
 
 	char		name[128];
 	int			i, slot;
@@ -2848,7 +3337,7 @@ void menu_maybe_init ( void )
 
 	/* main menu */
 	menu_main = menu_new( NULL, ID_MENU_MAIN, menu_callback_main );
-	menu_admintool = menu_new( menu_main, ID_MENU_ADMINTOOLS, menu_callback_admintools );
+	menu_admintool = menu_new(menu_main, ID_MENU_ADMINTOOLS, menu_callback_admintools);
 	menu_cheats = menu_new( menu_main, ID_MENU_CHEATS, menu_callback_cheats );
 	menu_patches = menu_new( menu_main, ID_MENU_PATCHES, menu_callback_patches );
 	menu_weapons = menu_new( menu_main, ID_MENU_WEAPONS, menu_callback_weapons );
@@ -2858,7 +3347,21 @@ void menu_maybe_init ( void )
 	/* main menu -> cheats */
 	menu_cheats_inv = menu_new( menu_cheats, ID_MENU_CHEATS_INVULN, menu_callback_cheats_invuln );
 	menu_cheats_mods = menu_new( menu_cheats, ID_MENU_CHEATS_MODS, menu_callback_cheats_mods );
-	menu_chat_colors = menu_new( menu_admintool, ID_MENU_CHAT, menu_callback_admintools );
+	
+	menu_admin_setting = menu_new(menu_admintool, ID_MENU_CHAT, menu_callback_adminsetting);
+	menu_chat_colors = menu_new(menu_admin_setting, ID_MENU_CHAT, menu_callback_admintools);
+	menu_color_hud = menu_new(menu_admin_setting, ID_MENU_CHAT, menu_callback_adminchat);
+	menu_color_enable_setting = menu_new(menu_color_hud, ID_MENU_CHAT, menu_callback_hud);
+	menu_admin_chat = menu_new(menu_admin_setting, ID_MENU_CHAT, menu_callback_adminchat);
+	menu_color_sms_setting = menu_new(menu_admin_chat, ID_MENU_CHAT, menu_callback_adminchat);
+	menu_color_report_setting = menu_new(menu_admin_chat, ID_MENU_CHAT, menu_callback_adminchat);
+	menu_color_reportr_setting = menu_new(menu_admin_chat, ID_MENU_CHAT, menu_callback_adminchat);
+	menu_color_feedback_setting = menu_new(menu_admin_chat, ID_MENU_CHAT, menu_callback_adminchat);
+	menu_color_support_setting = menu_new(menu_admin_chat, ID_MENU_CHAT, menu_callback_adminchat);
+	menu_admin_trace = menu_new(menu_admin_setting, ID_MENU_CHAT, menu_callback_admintrace);
+	menu_color_trace_setting = menu_new(menu_admin_trace, ID_MENU_CHAT, menu_callback_admintrace);
+	menu_color_trace_hit_setting = menu_new(menu_admin_trace, ID_MENU_CHAT, menu_callback_admintrace);
+
 	menu_cheats_weather = menu_new( menu_cheats, ID_MENU_CHEATS_WEATHER, menu_callback_cheats );
 	// disabled for now until we/mta rework CHandlingEntrySA
 	//menu_cheats_handling = menu_new( menu_cheats, ID_MENU_CHEATS_HANDLING, menu_callback_handling );
@@ -2903,9 +3406,77 @@ void menu_maybe_init ( void )
 	}
 
 	/** Menu Items **/
+	/*admin menu*/
+	menu_item_add(menu_main, NULL, "\tAdmin Samp-RP", ID_NONE, MENU_COLOR_SEPARATOR, NULL);
+	menu_item_add(menu_main, menu_admintool, "Admin Tools", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+
+	menu_item_add(menu_admintool, menu_admin_setting, "Настройки", ID_ADMIN_SETTINGS, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_admin_setting, menu_chat_colors, "Настройки активных функций", ID_MENU_ADMINS, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_admin_setting, menu_admin_chat, "Настройки чата", ID_ADMIN_CHAT, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_admin_setting, menu_color_hud, "Настройки HUD'a", ID_COLOR_HUD, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_admin_setting, menu_admin_trace, "Настройки трейсеров", ID_ADMIN_TRACE, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_chat_colors, NULL, "Логи банов", ID_CHATLOGBAN, MENU_COLOR_DEFAULT, NULL);
+    menu_item_add(menu_chat_colors, NULL, "Логи варнов", ID_CHATLOGWARN, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_chat_colors, NULL, "Чекер коннекта игроков", ID_CONNECT_LOG, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_chat_colors, NULL, "Трейсеры", ID_TRACE, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_chat_colors, NULL, "Чекер дисконнекта игроков", ID_DISCONNECT_LOG, MENU_COLOR_DEFAULT, NULL);
+
+	menu_item_add(menu_color_hud, menu_color_enable_setting, "Изменение цвета HUD'a", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+	addColorItems(menu_color_enable_setting, color_enable, ID_COLORSETTING_HUD_R);
+	addSaveButton(menu_color_enable_setting, ColorSettingCode::HUD);
+
+	menu_item_add(menu_admin_chat, menu_color_sms_setting, "Изменение цвета SMS", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_color_sms_setting, NULL, "Изменить цвет", ID_COLORSETTING_SMS_ENABLE, MENU_COLOR_DEFAULT, NULL);
+    addColorItems(menu_color_sms_setting, A_Set.dwColorSms, ID_COLORSETTING_SMS_R);
+    addSaveButton(menu_color_sms_setting, ColorSettingCode::SMS);
+
+	menu_item_add(menu_admin_chat, menu_color_report_setting, "Изменение цвета Репорта", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_color_report_setting, NULL, "Изменить цвет", ID_COLORSETTING_REPORT_ENABLE, MENU_COLOR_DEFAULT, NULL);
+    addColorItems(menu_color_report_setting, A_Set.dwColorReport, ID_COLORSETTING_REPORT_R);
+    addSaveButton(menu_color_report_setting, ColorSettingCode::REPORT);
+
+	menu_item_add(menu_admin_chat, menu_color_reportr_setting, "Изменение цвета Жалобы", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_color_reportr_setting, NULL, "Изменить цвет", ID_COLORSETTING_REPORTR_ENABLE, MENU_COLOR_DEFAULT, NULL);
+    addColorItems(menu_color_reportr_setting, A_Set.dwColorReportr, ID_COLORSETTING_REPORTR_R);
+    addSaveButton(menu_color_reportr_setting, ColorSettingCode::REPORTR);
+
+	menu_item_add(menu_admin_chat, menu_color_feedback_setting, "Изменение цвета ответа", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_color_feedback_setting, NULL, "Изменить цвет", ID_COLORSETTING_FEEDBACK_ENABLE, MENU_COLOR_DEFAULT, NULL);
+    addColorItems(menu_color_feedback_setting, A_Set.dwColorFeedback, ID_COLORSETTING_FEEDBACK_R);
+    addSaveButton(menu_color_feedback_setting, ColorSettingCode::FEEDBACK);
+
+	menu_item_add(menu_admin_chat, menu_color_support_setting, "Изменение цвета Саппорт чата", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_color_support_setting, NULL, "Изменить цвет", ID_COLORSETTING_SUPPORT_ENABLE, MENU_COLOR_DEFAULT, NULL);
+    addColorItems(menu_color_support_setting, A_Set.dwColorSupport, ID_COLORSETTING_SUPPORT_R);
+    addSaveButton(menu_color_support_setting, ColorSettingCode::SUPPORT);
+
+	menu_item_add(menu_admin_chat, NULL, "ID в чат", ID_CHATID, MENU_COLOR_DEFAULT, NULL);
+	menu_item_add(menu_admin_chat, NULL, "Изменение цвета чата", ID_CHATCOLOURS, MENU_COLOR_DEFAULT, NULL);
+
+  
+	snprintf(name, sizeof(name), "Время продолжительности трейсера: %u ms", A_Set.dwTraceTimer);
+	menu_item_add(menu_admin_trace, NULL, name, ID_TRACE_TIME, MENU_COLOR_DEFAULT, NULL);
+	snprintf(name, sizeof(name), "Максимальное кол-во трейсеров: %hu", A_Set.usTraceMaxCount);
+	menu_item_add(menu_admin_trace, NULL, name, ID_TRACE_COUNT, MENU_COLOR_DEFAULT, NULL);
+
+	menu_item_add(menu_admin_trace, menu_color_trace_setting, "Цвет трейсера при промахе", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+    addColorItems(menu_color_trace_setting, A_Set.dwColorTracer, ID_TRACE_COLOR_R);
+    addSaveButton(menu_color_trace_setting, ColorSettingCode::TRACER);
+
+	menu_item_add(menu_admin_trace, menu_color_trace_hit_setting, "Цвет трейсера при поподании", ID_NONE, MENU_COLOR_DEFAULT, NULL);
+    addColorItems(menu_color_trace_hit_setting, A_Set.dwColorTracerHit, ID_TRACE_COLOR_HIT_R);
+    addSaveButton(menu_color_trace_hit_setting, ColorSettingCode::TRACERHIT);
+
+    menu_item_add(menu_admin_setting, NULL, "\tНастройки визуализации", ID_NONE, MENU_COLOR_SEPARATOR, NULL);
+    snprintf(name, sizeof(name), "Размер шрифта:  %hhu", A_Set.byteFontHeight);
+    menu_item_add(menu_admin_setting, NULL, name, ID_FONT_HEIGHT, MENU_COLOR_DEFAULT, NULL);
+	snprintf(name, sizeof(name), "Вид тэгов ВХ:  %hhu", A_Set.tags);
+	menu_item_add(menu_admin_setting, NULL, name, ID_FONT_TAGS, MENU_COLOR_DEFAULT, NULL);
+    snprintf(name, sizeof(name), "Название шрифта:  %s", A_Set.fontName.c_str());
+    menu_item_add(menu_admin_setting, NULL, name, ID_FONT_NAME, MENU_COLOR_DEFAULT, NULL);
+	/*end admin menu*/
+
 	/* main menu */
-	menu_item_add( menu_main, NULL, "\tAdmin Samp-RP", ID_NONE, MENU_COLOR_SEPARATOR, NULL );
-	menu_item_add( menu_main, menu_admintool, "Admin Tools", ID_NONE, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_main, NULL, "\tGTA", ID_NONE, MENU_COLOR_SEPARATOR, NULL );
 	menu_item_add( menu_main, menu_cheats, "Cheats", ID_NONE, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_main, menu_weapons, "Weapons", ID_NONE, MENU_COLOR_DEFAULT, NULL );
@@ -2913,7 +3484,7 @@ void menu_maybe_init ( void )
 	menu_item_add( menu_main, menu_misc, "Misc.", ID_NONE, MENU_COLOR_DEFAULT, NULL );
 	snprintf( name, sizeof(name), "GTA Patches (%d/%d)", iGTAPatchesCount, INI_PATCHES_MAX );
 	menu_item_add( menu_main, menu_patches, name, ID_NONE, MENU_COLOR_DEFAULT, NULL );
-
+	
 	/* main menu (samp specific) */
 	if ( g_dwSAMP_Addr != NULL )
 	{
@@ -2924,9 +3495,6 @@ void menu_maybe_init ( void )
 		snprintf( name, sizeof(name), "SA:MP Patches (%d/%d)", iSAMPPatchesCount, INI_SAMPPATCHES_MAX );
 		menu_item_add( menu_main, menu_samppatches, name, ID_NONE, MENU_COLOR_DEFAULT, NULL );
 	}
-
-	menu_item_add( menu_admintool, menu_chat_colors, "������� ����", ID_MENU_ADMINS, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_chat_colors, NULL, "���������� ����� ����", ID_CHATCOLOURS, MENU_COLOR_DEFAULT, NULL );
 
 	/* main menu -> cheats - menu items */
 	menu_item_add( menu_cheats, menu_cheats_mods, "Vehicle upgrades", ID_CHEAT_MODS, MENU_COLOR_DEFAULT, NULL );
@@ -2953,7 +3521,6 @@ void menu_maybe_init ( void )
 	snprintf( name, sizeof(name), "Player Fly Speed: %0.01f", set.fly_player_speed );
 	menu_item_add( menu_cheats, NULL, name, ID_CHEAT_FLY_SPEED, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_cheats, NULL, "Disable Water Waves", ID_CHEAT_DISABLE_WAVES, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_cheats, NULL, "Surf", ID_CHEAT_SURF, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_cheats, NULL, "Freeze vehicle spin", ID_CHEAT_FREEZEROT, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_cheats, NULL, "Draw map lines", ID_CHEAT_MAP_DRAW_LINES, MENU_COLOR_DEFAULT, NULL );
 
@@ -3165,23 +3732,16 @@ void menu_maybe_init ( void )
 	menu_item_add( menu_hudindicators, NULL, "Render text shadows", ID_HUDIND_TSHADOWS, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "Inv", ID_HUDIND_INV, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "Weapon", ID_HUDIND_WEAPON, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_hudindicators, NULL, "Money", ID_HUDIND_MONEY, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "Freeze", ID_HUDIND_FREEZE, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "In vehicle AirBrk", ID_HUDIND_INVEH_AIRBRK, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_hudindicators, NULL, "In vehicle Stick", ID_HUDIND_INVEH_STICK, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_hudindicators, NULL, "In vehicle BrkDance", ID_HUDIND_INVEH_BRKDANCE, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_hudindicators, NULL, "In vehicle SpiderWheels", ID_HUDIND_INVEH_SPIDER, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "In vehicle Fly", ID_HUDIND_INVEH_FLY, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "On foot AirBrk", ID_HUDIND_ONFOOT_AIRBRK, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_hudindicators, NULL, "On foot Stick", ID_HUDIND_ONFOOT_STICK, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "On foot Fly", ID_HUDIND_ONFOOT_FLY, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_hudindicators, NULL, "Aim", ID_HUDIND_ONFOOT_AIM, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "Surf", ID_HUDIND_SURF, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "FreezeRot", ID_HUDIND_FREEZEROT, MENU_COLOR_DEFAULT, NULL );
 
 	menu_item_add( menu_hudindicators, NULL, "Position", ID_HUDIND_POS, MENU_COLOR_DEFAULT, NULL );
 	menu_item_add( menu_hudindicators, NULL, "FPS", ID_HUDIND_FPS, MENU_COLOR_DEFAULT, NULL );
-	menu_item_add( menu_hudindicators, NULL, "Toggle left bottom bars", ID_HUDIND_LB_BARS, MENU_COLOR_DEFAULT, NULL );
 
 	if ( g_dwSAMP_Addr != NULL )
 	{

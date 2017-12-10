@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 	PROJECT:		mod_sa
 	LICENSE:		See LICENSE in the top level directory
@@ -21,6 +21,7 @@
 
 */
 #include "main.h"
+char     szFontsIni[256];
 
 
 HINSTANCE				g_hOrigDll = NULL;
@@ -31,6 +32,8 @@ char					g_szWorkingDirectory[MAX_PATH];
 FILE					*g_flLog = NULL;
 FILE					*g_flLogAll = NULL;
 FILE					*g_flLogChatbox = NULL;
+FILE					*g_flLogConnect = NULL;
+FILE					*g_flLogDisconnect = NULL;
 FILE					*g_flLogChatboxAll = NULL;
 char					g_szLastFunc[256];
 uint32_t				g_dwSAMP_Addr = NULL;
@@ -55,6 +58,7 @@ LPTOP_LEVEL_EXCEPTION_FILTER OrigExceptionFilter;
 void traceLastFunc ( const char *szFunc )
 {
 	_snprintf_s( g_szLastFunc, sizeof(g_szLastFunc)-1, szFunc );
+
 }
 
 void Log ( const char *fmt, ... )
@@ -102,6 +106,54 @@ void Log ( const char *fmt, ... )
 	fflush( g_flLogAll );
 }
 
+void LogConnection(const char *fmtt, ...)
+{
+	SYSTEMTIME time;
+	va_list  ap;
+
+	if (g_flLogConnect == NULL)
+	{
+		char filename[512];
+		snprintf(filename, sizeof(filename), "%s\\mod_sa\\Logs\\connectlog.log", g_szWorkingDirectory);
+		g_flLogConnect = fopen(filename, "a");
+	}
+	else
+	{
+		GetLocalTime(&time);
+		fprintf(g_flLogConnect, "[%02d-%02d-%02d || %02d:%02d:%02d.%03d] ", time.wDay, time.wMonth, time.wYear, time.wHour,
+			time.wMinute, time.wSecond, time.wMilliseconds);
+		va_start(ap, fmtt);
+		vfprintf(g_flLogConnect, fmtt, ap);
+		fprintf(g_flLogConnect, "\n");
+		va_end(ap);
+		fflush(g_flLogConnect);
+	}
+}
+
+void LogDisconnect(const char *fmtt, ...)
+{
+	SYSTEMTIME time;
+	va_list  ap;
+
+	if (g_flLogDisconnect == NULL)
+	{
+		char filename[512];
+		snprintf(filename, sizeof(filename), "%s\\mod_sa\\Logs\\disconnetlog.log", g_szWorkingDirectory);
+		g_flLogDisconnect = fopen(filename, "a");
+	}
+	else
+	{
+		GetLocalTime(&time);
+		fprintf(g_flLogDisconnect, "[%02d-%02d-%02d || %02d:%02d:%02d.%03d] ", time.wDay, time.wMonth, time.wYear, time.wHour,
+		time.wMinute, time.wSecond, time.wMilliseconds);
+		va_start(ap, fmtt);
+		vfprintf(g_flLogDisconnect, fmtt, ap);
+		fprintf(g_flLogDisconnect, "\n");
+		va_end(ap);
+		fflush(g_flLogDisconnect);
+	}
+}
+
 void LogChatbox ( bool bLast, const char *fmt, ... )
 {
 	SYSTEMTIME	time;
@@ -110,7 +162,7 @@ void LogChatbox ( bool bLast, const char *fmt, ... )
 	if ( g_flLogChatbox == NULL )
 	{
 		char	filename[512];
-		snprintf( filename, sizeof(filename), "%s\\" M0D_FOLDER "%s", g_szWorkingDirectory, "mod_sa_chatbox.log" );
+		snprintf(filename, sizeof(filename), "%s\\mod_sa\\Logs\\chatbox.log", g_szWorkingDirectory);
 
 		g_flLogChatbox = fopen( filename, "w" );
 		if ( g_flLogChatbox == NULL )
@@ -130,7 +182,7 @@ void LogChatbox ( bool bLast, const char *fmt, ... )
 	if ( g_flLogChatboxAll == NULL )
 	{
 		char	filename_all[512];
-		snprintf( filename_all, sizeof(filename_all), "%s\\" M0D_FOLDER "%s", g_szWorkingDirectory, "mod_sa_chatbox_all.log" );
+		snprintf(filename_all, sizeof(filename_all), "%s\\mod_sa\\Logs\\chatbox_all.log", g_szWorkingDirectory);
 
 		g_flLogChatboxAll = fopen( filename_all, "a" );
 		if ( g_flLogChatboxAll == NULL )
@@ -169,6 +221,48 @@ void setDebugPointer ( void *ptr )
 	debug->ptr[debug->hist_pos] = (uint8_t *)ptr;
 	debug->offset[debug->hist_pos] = 0;
 	debug->data_prev_clear = 1;
+}
+
+
+void LoadD3DFonts()
+{
+	char szFontName[32];
+	D3DCOLOR color;
+	if (!strstr(szFontName, M0D_FOLDER))
+		snprintf(szFontsIni, sizeof(szFontsIni), ".\\" M0D_FOLDER "%s", "admin_mod_sa.ini");
+
+	if (A_Ini.SectionExist("Visual"))
+	{
+		if (GetPrivateProfileStringA("Visual", "Enabled", "8A2BE2", szFontName, 9, szFontsIni))
+		{
+			if (stringToD3DColor(szFontName, &color))
+			{
+				color_enable = color;
+				D3DColorToStringColor(color, szColorEnable);
+			}
+			else
+				Log("Error color: [Type]: \"Enabled\", [ValueIni]: \"%s\", [ConvertValue]: %X", szFontName, color);
+		}
+
+		if (GetPrivateProfileStringA("Visual", "Text", "FFFFFF", szFontName, 9, szFontsIni))
+		{
+			if (stringToD3DColor(szFontName, &color))
+			{
+				color_text = color;
+				D3DColorToStringColor(color, szColorText);
+			}
+			else
+				Log("Error color: [Type]: \"Text\", [ValueIni]: \"%s\", [ConvertValue]: %X", szFontName, color);
+		}
+	}
+
+	else
+	{
+		WritePrivateProfileStringA("Visual", "Enabled", "8A2BE2", szFontsIni);
+		WritePrivateProfileStringA("Visual", "Text", "FFFFFF", szFontsIni);
+	}
+	A_Set.aCheckPos.x = A_Ini.GetInt("Position", "AdminChecker_X");
+	A_Set.aCheckPos.y = A_Ini.GetInt("Position", "AdminChecker_Y");
 }
 
 static int init ( void )
@@ -236,6 +330,24 @@ static int init ( void )
 			return 0;
 		}
 #pragma warning( default : 4127 )
+
+		char	set_file[MAX_PATH];
+
+		snprintf(set_file, sizeof(set_file), "%s\\mod_sa\\Checkers\\Admins.ini", g_szWorkingDirectory);
+
+		if(!FileExists(set_file))
+		{
+			MessageBox( 0, "Отсутствует файл списка чекера админов (Admins.ini) в папке mod_sa, собейт не будет загружен.", "Ошибка", 0 );
+			return 0;
+		}
+
+		snprintf(set_file, sizeof(set_file), "%s\\mod_sa\\Checkers\\Players.ini", g_szWorkingDirectory);
+
+		if(!FileExists(set_file))
+		{
+			MessageBox( 0, "Отсутствует файл списка чекера игроков (Players.ini) в папке mod_sa, собейт не будет загружен.", "Ошибка", 0 );
+			return 0;
+		}
 
 		ini_load();
 		
@@ -474,11 +586,12 @@ BOOL APIENTRY DllMain ( HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpRese
 	switch ( ul_reason_for_call )
 	{
 	case DLL_PROCESS_ATTACH:
+		LoadD3DFonts();
 		DisableThreadLibraryCalls( hModule );
 
 		//Hooks
 		//lOldWndProc = SetWindowLongA(*(HWND*)0xC97C1C, GWL_WNDPROC, LONG(WndProc));
-		/*hhKeyKook = SetWindowsHookExA(WH_KEYBOARD_LL, LLKeyProc, NULL, 0);//������� � ��������� samp.dll
+		/*hhKeyKook = SetWindowsHookExA(WH_KEYBOARD_LL, LLKeyProc, NULL, 0);//перенес в подгрузку samp.dll
 		if (hhKeyKook == nullptr)
 			MessageBoxA(0, std::string("Error "+std::to_string(GetLastError())).c_str(), "!!!!!!!!!", MB_OKCANCEL);*/
 
@@ -490,7 +603,7 @@ BOOL APIENTRY DllMain ( HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpRese
 
 	case DLL_PROCESS_DETACH:
 
-		if (hhKeyKook!=nullptr)
+		if (hhKeyKook != nullptr)
 			UnhookWindowsHookEx(hhKeyKook);
 
 		if ( g_hOrigDll != NULL )
@@ -515,6 +628,21 @@ BOOL APIENTRY DllMain ( HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpRese
 			fclose( g_flLogAll );
 			g_flLogAll = NULL;
 		}
+
+        if (A_Set.fLogBan != nullptr) {
+            fclose(A_Set.fLogBan);
+            A_Set.fLogBan = nullptr;
+        }
+
+        if (A_Set.fLogWarn != nullptr) {
+            fclose(A_Set.fLogWarn);
+            A_Set.fLogWarn = nullptr;
+        }
+
+        if (A_Set.fLogKillList != nullptr) {
+            fclose(A_Set.fLogKillList);
+            A_Set.fLogKillList = nullptr;
+        }
 
 		if ( set.chatbox_logging )
 		{

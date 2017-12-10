@@ -137,6 +137,7 @@ public:
 
 	HRESULT		Print( const char *text, D3DCOLOR color, float x, float y, bool skipColorTags, bool noColorFormat );
 	HRESULT		PrintShadow ( float x, float y, DWORD color, const char *szText );
+	HRESULT		PrintWithoutShadow(float x, float y, DWORD color, const char *szText);
 
 	float		DrawLength ( const char *szText, bool noColorFormat = false ) const;
 	size_t		GetCharPos( const char *text, float x, bool noColorFormat = false ) const;

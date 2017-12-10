@@ -199,7 +199,6 @@ struct cheat_state_generic
 {
 	int		hp_cheat;
 	int		money;
-	int		chatcolors;
 	int		weapon;
 	int		map;
 	int		map_vehicles;

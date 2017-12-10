@@ -45,7 +45,7 @@ bool HookedRakClientInterface::Send(BitStream * bitStream, PacketPriority priori
 	return g_RakClient->GetInterface()->Send(bitStream, priority, reliability, orderingChannel);
 }
 
-/*Packet *HookedRakClientInterface::Receive(void)
+Packet *HookedRakClientInterface::Receive(void)
 {
 	traceLastFunc("HookedRakClientInterface::Receive");
 	Packet *p = g_RakClient->GetInterface()->Receive();
@@ -57,86 +57,7 @@ bool HookedRakClientInterface::Send(BitStream * bitStream, PacketPriority priori
 		p = g_RakClient->GetInterface()->Receive();
 	}
 	return p;
-}*/
-
-Packet *HookedRakClientInterface::Receive(void)
-{
-	traceLastFunc("HookedRakClientInterface::Receive");
-
-	Packet *p = g_RakClient->GetInterface()->Receive();
-
-	if (p != nullptr)
-	{
-		BYTE packetId;
-		BitStream bsData(p->data, p->length, false);
-		bsData.Read(packetId);
-
-
-		if (packetId == ID_PLAYER_SYNC)
-		   {
-			static DWORD dwTime[SAMP_MAX_PLAYERS], dwTimeGM;
-			short pId;
-			bool bVal;
-			float fVec;
-			short surf_id = -1;
-			float fpos[3];
-			bsData.Read(pId);
-
-			bsData.Read(bVal);
-			if (bVal)
-			 bsData.IgnoreBits(16);
-			bsData.Read(bVal);
-			if (bVal)
-			 bsData.IgnoreBits(16);
-			bsData.IgnoreBits(16);//Keys
-			//bsData.IgnoreBits(12 * 8);//pos
-			bsData.Read(fpos);
-			bsData.IgnoreBits(52);//quart
-			bsData.IgnoreBits(8);//hp
-			bsData.IgnoreBits(8);//weap
-			bsData.IgnoreBits(8);//spAct
-			bsData.Read(fVec);
-			if (fVec != 0.0f)
-			{
-			 bsData.IgnoreBits(48);
-			}
-			bsData.Read(bVal);//surf
-			if (bVal)
-			{
-			 bsData.Read(surf_id);
-
-			 if (GetTickCount() - dwTimeGM > 3000 && surf_id == 1)
-			 {
-				 float offs = g_Players->pRemotePlayer[pId]->pPlayerData->pSAMP_Actor->pGTA_Ped->base.matrix[14] - fpos[2];
-				 //addMessageToChatWindow("Offs %f", offs);
-				 if (abs(offs - 15)<0.6 || abs(offs - 1000)<0.6)
-				 {
-					 addMessageToChatWindow("<Warning> Игрок: %s[%d] использует ГМ.", getPlayerName(pId),pId);
-					 dwTimeGM = GetTickCount();
-				 }
-			 }
-
-			 int fOffs[3];
-			 bsData.Read(fOffs);
-			 if (surf_id != -1 && (fOffs[0] >= 0xFF800000 || fOffs[1] >= 0xFF800000 || fOffs[2] >= 0xFF800000))
-			 {
-				 if (GetTickCount() - dwTime[pId] > 15000)
-				 {
-				 addMessageToChatWindow("<Warning> Игрок: %s использует крашер.", getPlayerName(pId));
-				 dwTime[pId] = GetTickCount();
-				 }
-			  bsData.SetWriteOffset(bsData.GetReadOffset() - 112);
-			  bsData.Write((short)0);
-		      bsData.Write((float)0.0f);
-		      bsData.Write((float)0.0f);
-		      bsData.Write((float)0.0f);
-			  }
-		   }
-	    }
-	 }
-	return p;
 }
-
 
 bool HookedRakClientInterface::Connect(const char* host, unsigned short serverPort, unsigned short clientPort, unsigned int depreciated, int threadSleepTimer)
 {

@@ -28,7 +28,7 @@
 
 #define M0D_FOLDER		"mod_sa\\"
 #define M0D_NAME		"Admin_m0d"
-#define M0D_VERSION     "0.0.0.1 (beta)"
+#define M0D_VERSION     "0.0.1.7 (beta)"
 #define M0D_AUTHOR      "Marko_Friedmann"
 #define SAMP_VERSION	"SA:MP 0.3.7"
 #define M0D_DEV_ADVANCEDINFO
@@ -82,6 +82,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <regex>
 
 #include <intrin.h>
 #pragma intrinsic(_ReturnAddress)
@@ -214,6 +215,7 @@
 #include "proxyIDirect3D9.h"
 #include "proxyIDirect3DDevice9.h"
 
+#include "A_INI.h"
 #include "A__Settings.h"
 #include "A_Funcs.h"
 #include "A_Cmd.h"

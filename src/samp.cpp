@@ -218,15 +218,7 @@ struct stScoreboardInfo *stGetScoreboardInfo(void)
 
 struct stDialogInfo *stGetDialogInfo(void)
 {
-	if (g_dwSAMP_Addr == NULL)
-		return nullptr;
-
-	uint32_t    dialog_ptr;
-	dialog_ptr = (UINT_PTR)* (uint32_t *)((uint8_t *)(void *)((uint8_t *)g_dwSAMP_Addr + SAMP_DIALOG_INFO_OFFSET));
-	if (dialog_ptr == NULL)
-		return nullptr;
-
-	return (struct stDialogInfo *)dialog_ptr;
+    return GetSAMPPtrInfo<stDialogInfo *>(SAMP_DIALOG_INFO_OFFSET);
 }
 
 int isBadSAMPVehicleID(int iVehicleID)
@@ -626,6 +618,42 @@ void addClientCommand(char *name, CMDPROC function)
 
 struct gui	*gui_samp_cheat_state_text = &set.guiset[1];
 void addMessageToChatWindow(const char *text, ...)
+{
+	if (g_SAMP != NULL)
+	{
+		va_list ap;
+		if (text == NULL)
+			return;
+
+		char	tmp[512];
+		char	tmp2[512];
+		memset(tmp, 0, 512);
+
+		va_start(ap, text);
+		vsnprintf(tmp, sizeof(tmp) - 1, text, ap);
+		va_end(ap);
+
+		sprintf(tmp2, "%s[admin_mod]%s {FFFFFF}%s", szColorEnable, szColorText, tmp);
+		addToChatWindow(tmp2, D3DCOLOR_XRGB(255, 255, 255));
+	}
+	else
+	{
+		va_list ap;
+		if (text == NULL)
+			return;
+
+		char	tmp[512];
+		memset(tmp, 0, 512);
+
+		va_start(ap, text);
+		vsnprintf(tmp, sizeof(tmp) - 1, text, ap);
+		va_end(ap);
+
+		cheat_state_text(tmp, D3DCOLOR_ARGB(255, 0, 200, 200));
+	}
+}
+
+void addMessageToChatWindowWarning(const char *text, ...)
 {
 	if (g_SAMP != NULL)
 	{

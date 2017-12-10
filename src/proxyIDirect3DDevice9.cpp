@@ -1,4 +1,4 @@
-/*
+﻿/*
 
 	PROJECT:		mod_sa
 	LICENSE:		See LICENSE in the top level directory
@@ -73,7 +73,7 @@ CD3DFont				*pD3DFontFixedSmall = new CD3DFont( "Small Fonts", 8, FCR_BORDER );
 
 //pD3DFontChat = chat, kill list
 //CD3DFont				*pD3DFontChat = new CD3DFont( "Tahoma", 10, FCR_NONE );
-CD3DFont				*pD3DFontChat = new CD3DFont("Tahoma", 11, FCR_BOLD | FCR_BORDER);
+CD3DFont				*pD3DFontChat = new CD3DFont( "Tahoma", 11, FCR_BOLD | FCR_BORDER );
 
 //pD3DFontDebugWnd = debug window
 CD3DFont				*pD3DFontDebugWnd = new CD3DFont("Lucida Console", 8, FCR_BORDER );
@@ -88,6 +88,13 @@ struct gui				*gta_hp_bar = &set.guiset[6];
 struct gui				*gta_money_hud = &set.guiset[7];
 
 extern int				iClickWarpEnabled;
+
+#define D3DCOLOR_ALPHA(alpha, color) (((color << 8)>>8)|(alpha<<24))
+
+D3DCOLOR color_enable = color_enable;
+D3DCOLOR color_text = color_text;
+
+char szColorEnable[9] = "{8A2BE2}", szColorText[9] = "{FFFFFF}";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Common D3D functions.
@@ -234,7 +241,8 @@ void LoadSpriteTexture ( void )
 	return;
 
 out: ;
-	SAFE_RELEASE( pSpriteTexture ) if ( fd != NULL )
+    SAFE_RELEASE(pSpriteTexture);
+    if (fd != NULL)
 		fclose( fd );
 	return;
 }
@@ -673,7 +681,7 @@ void RenderMap ( void )
 				if (ped == pPedSelf)
 					continue;
 				_snprintf_s(buf, sizeof(buf)-1, "%d", ped->GetArrayID());
-				RenderMapDot(&self->base.matrix[4 * 3], &ped->GetPosition()->fX, D3DCOLOR_XRGB(255, 255, 255), buf);
+				RenderMapDot(&self->base.matrix[4 * 3], &ped->GetPosition()->fX, color_text, buf);
 			}
 		}
 	}
@@ -733,7 +741,7 @@ void RenderMap ( void )
 	}
 	
 	// self
-	RenderMapDot( &self->base.matrix[4 * 3], &self->base.matrix[4 * 3], D3DCOLOR_XRGB(255, 255, 255), NULL );
+	RenderMapDot(&self->base.matrix[4 * 3], &self->base.matrix[4 * 3], color_text, NULL);
 }
 
 
@@ -1098,22 +1106,22 @@ void renderPlayerTags ( void )
 	iter = pPools->m_pedPool.map.begin();
 
 	// start render ESP tags
-	float h, playerBaseY;
-	while ( iter.pos < iter.end )
+	float w, h, playerBaseY;
+	while (iter.pos < iter.end)
 	{
 		// map iterator pointer to our pointer
 		iterPed = iter.pos->second;
 
 		// advance to next item for next pass
 		iter.pos++;
-		if ( !iterPed )
+		if (!iterPed)
 			continue;
 
 		// get player id
 		iGTAID = (int)iterPed->GetArrayID();
 
 		// ignore if isPastMaxDistance or if it's us
-		if ( g_playerTagInfo[iGTAID].isPastMaxDistance || iGTAID == selfGTAID )
+		if (g_playerTagInfo[iGTAID].isPastMaxDistance || iGTAID == selfGTAID)
 			continue;
 
 		playerBaseY = g_playerTagInfo[iGTAID].tagPosition.fY -
@@ -1121,19 +1129,19 @@ void renderPlayerTags ( void )
 			ESP_tag_player_pixelOffsetY;
 
 		int iSAMPID;
-		if ( g_Players )
-			iSAMPID = translateGTASAMP_pedPool.iSAMPID[getPedGTAIDFromInterface( (DWORD *)iterPed->GetPedInterface() )];
+		if (g_Players)
+			iSAMPID = translateGTASAMP_pedPool.iSAMPID[getPedGTAIDFromInterface((DWORD *)iterPed->GetPedInterface())];
 
 		// get Ped health
 		// works in single player, but SAMP maintains its own player health
 		//vh = iterPed->GetHealth();
 		// get samp health
-		if ( g_Players )
+		if (g_Players)
 		{
-			if ( g_Players->pRemotePlayer[iSAMPID] != NULL
+			if (g_Players->pRemotePlayer[iSAMPID] != NULL
 				&&	 g_Players->pRemotePlayer[iSAMPID]->pPlayerData != NULL
 				&&  g_Players->pRemotePlayer[iSAMPID]->pPlayerData->pSAMP_Actor != NULL
-				&&  (DWORD)g_Players->pRemotePlayer[iSAMPID]->pPlayerData->pSAMP_Actor->pGTA_Ped == (DWORD)iterPed->GetPedInterface() )
+				&& (DWORD)g_Players->pRemotePlayer[iSAMPID]->pPlayerData->pSAMP_Actor->pGTA_Ped == (DWORD)iterPed->GetPedInterface())
 			{
 				vh = g_Players->pRemotePlayer[iSAMPID]->pPlayerData->fActorHealth;
 				va = g_Players->pRemotePlayer[iSAMPID]->pPlayerData->fActorArmor;
@@ -1151,58 +1159,291 @@ void renderPlayerTags ( void )
 			va = iterPed->GetArmor();
 		}
 
-
-		float hpbar = vh;
-		if ( hpbar > 100.0f )
-			hpbar = 100.0f;
-		hpbar *= 70.0f / 100.0f;
-
-		float offY = ESP_tag_player_D3DBox_pixelOffsetY;
-		if ( va > 0.0f )
+		if (A_Set.tags == 1)
 		{
-			float armbar = va;
-			if ( armbar > 100.0f )
-				armbar = 100.0f;
-			armbar *= 70.0f / 100.0f;
-			render->D3DBoxBorder( g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
-							playerBaseY + offY, 70.0f, 6.0f, D3DCOLOR_ARGB(255, 0, 0, 0), D3DCOLOR_ARGB(128, 50, 50, 50) );
-			render->D3DBox( g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
-							playerBaseY + 1.0f + offY, armbar - 2.0f, 4.0f, D3DCOLOR_ARGB(128, 250, 250, 250) );
-			offY += 7.0f;
+			D3DCOLOR	color = D3DCOLOR_ARGB(75, 0, 200, 0);
+			if (vh > 100.0f)
+				vh = 100.0f;
+			if (vh < 100.0f && vh > 60.0f)
+				color = D3DCOLOR_ARGB(111, 0, 200, 0);
+			if (vh < 60.0f && vh > 20.0f)
+				color = D3DCOLOR_ARGB(111, 200, 200, 0);
+			if (vh < 20.0f && vh > 0.0f)
+				color = D3DCOLOR_ARGB(111, 200, 0, 0);
+
+			int ping;
+			if (g_Players->pRemotePlayer[iSAMPID]->iPing > 196) ping = 98;
+			else ping = g_Players->pRemotePlayer[iSAMPID]->iPing / 2;
+
+			render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+				playerBaseY + ESP_tag_player_D3DBox_pixelOffsetY, 100.0f, 11.0f, D3DCOLOR_ARGB(111, 0, 0, 0));
+			render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+				playerBaseY + 1.0f + ESP_tag_player_D3DBox_pixelOffsetY, vh - 2.0f, 9.0f, color);
+			render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+				playerBaseY + 11.0f + ESP_tag_player_D3DBox_pixelOffsetY, ping, 9.0f, D3DCOLOR_ARGB(111, 255, 165, 0));
+			render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+				playerBaseY + 11.0f + ESP_tag_player_D3DBox_pixelOffsetY, 100.0f, 10.0f, D3DCOLOR_ARGB(111, 0, 0, 0));
+
+			if (va > 0.0f)
+			{
+				if (va > 100.0f)
+					va = 100.0f;
+				va /= 1.0f;
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + ESP_tag_player_D3DBox_pixelOffsetY, va - 1.0f, 10.0f, D3DCOLOR_ARGB(111, 0, 0, 0));
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + 1.0f + ESP_tag_player_D3DBox_pixelOffsetY, va - 2.0f, 9.0f,
+					D3DCOLOR_ARGB(70, 210, 210, 210));
+			}
+
+
+			h = pD3DFontFixedSmall->DrawHeight() + 1;
+
+
+
+			if (!g_Players)
+			{
+				_snprintf_s(buf, sizeof(buf) - 1, "H: %d, A: %d", (int)iterPed->GetHealth(), (int)iterPed->GetArmor());
+				pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 8.0f, playerBaseY - h + 10.0f,
+					D3DCOLOR_ARGB(130, 0xFF, 0x6A, 0), buf);
+			}
+			else
+			{
+				_snprintf_s(buf, sizeof(buf) - 1, "H: %d, A: %d",
+					(int)g_Players->pRemotePlayer[iSAMPID]->pPlayerData->fActorHealth,
+					(int)g_Players->pRemotePlayer[iSAMPID]->pPlayerData->fActorArmor);
+				pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 8.0f, playerBaseY - h + 10.0f,
+					D3DCOLOR_ARGB(130, 0xFF, 0x6A, 0), buf);
+
+				_snprintf_s(buf, sizeof(buf) - 1, "P: %d, L: %d",
+					g_Players->pRemotePlayer[iSAMPID]->iPing,
+					g_Players->pRemotePlayer[iSAMPID]->iScore);
+				pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 8.0f, playerBaseY - h + 21.0f,
+					D3DCOLOR_ARGB(130, 0xFF, 0x6A, 0), buf);
+
+				uint32_t samp_info = (uint32_t)g_SAMP;
+				uint32_t func = g_dwSAMP_Addr + SAMP_FUNC_UPDATESCOREBOARDDATA;
+				__asm mov ecx, samp_info
+
+				__asm call func
+
+				h = pD3DFont_sampStuff->DrawHeight() - 1;
+				_snprintf_s(buf, sizeof(buf) - 1, "%s (%d)", getPlayerName(iSAMPID), iSAMPID);
+				w = pD3DFont_sampStuff->DrawLength(buf);
+				pD3DFont_sampStuff->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX, playerBaseY - h,
+					samp_color_get(iSAMPID, 0xDD000000), buf);
+
+				if (g_Players->pRemotePlayer[iSAMPID]->pPlayerData->iAFKState == 2)
+				{
+					char AFKText[] = "AFK";
+					float w = pD3DFontFixedSmall->DrawLength(AFKText);
+					h = pD3DFontFixedSmall->DrawHeight() + 1;
+					render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX + 100.0f + 1.0f,
+						playerBaseY + ESP_tag_player_D3DBox_pixelOffsetY, pD3DFont_sampStuff->DrawLength(AFKText) + 2.0f, 21.0f, D3DCOLOR_ARGB(111, 0, 0, 0));
+					pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX + 100.0f + 2.0f, playerBaseY - h + 16.0f,
+						D3DCOLOR_ARGB(130, 170, 170, 170), AFKText);
+				}
+			}
 		}
 
-		render->D3DBoxBorder( g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
-						playerBaseY + offY, 70.0f, 6.0f, D3DCOLOR_ARGB(255, 0, 0, 0), D3DCOLOR_ARGB(128, 80, 0, 0) );
-		render->D3DBox( g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
-						playerBaseY + 1.0f + offY, hpbar - 2.0f, 4.0f, D3DCOLOR_ARGB(128, 255, 0, 0) );
-
-		// this should also calculate the anti-aliasing top edge somehow
-		h = pD3DFontFixedSmall->DrawHeight() + 1;
-
-		if (va > 0.0f)
-			sprintf_s(buf, "%d {E00000}%d", (int)va, (int)vh);
-		else
-			sprintf_s(buf, "{E00000}%d", (int)vh);
-		float w = pD3DFontFixedSmall->DrawLength(buf);
-		pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 70.0f - w - 1.0f, playerBaseY + 6.0f + offY,
-										D3DCOLOR_ARGB(0xFF, 0xF0, 0xF0, 0xF0), buf);
-		if ( g_Players )
+		if (A_Set.tags == 3)
 		{
-			// render the main nametag last so it's on top
-			// this should calculate the anti-aliasing top edge somehow
-			h = pD3DFont_sampStuff->DrawHeight() - 1;
-			sprintf_s( buf, "%s (%d)", getPlayerName(iSAMPID), iSAMPID );
-			pD3DFont_sampStuff->PrintShadow( g_playerTagInfo[iGTAID].tagPosition.fX, playerBaseY - h,
-			samp_color_get( iSAMPID, 0xDD000000 ), buf );
+				D3DCOLOR	color = D3DCOLOR_ARGB(75, 0, 200, 0);
+				if (vh > 100.0f)
+					vh = 100.0f;
+				if (vh < 100.0f && vh > 60.0f)
+					color = D3DCOLOR_ARGB(111, 0, 200, 0);
+				if (vh < 60.0f && vh > 20.0f)
+					color = D3DCOLOR_ARGB(111, 200, 200, 0);
+				if (vh < 20.0f && vh > 0.0f)
+					color = D3DCOLOR_ARGB(111, 200, 0, 0);
 
-			if (g_Players->pRemotePlayer[iSAMPID]->pPlayerData->iAFKState == 2)
+				int ping;
+				if (g_Players->pRemotePlayer[iSAMPID]->iPing > 196) ping = 98;
+				else ping = g_Players->pRemotePlayer[iSAMPID]->iPing / 2;
+
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + ESP_tag_player_D3DBox_pixelOffsetY, 100.0f, 11.0f, D3DCOLOR_ARGB(111, 0, 0, 0));
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + 1.0f + ESP_tag_player_D3DBox_pixelOffsetY, vh - 2.0f, 9.0f, color);
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + 11.0f + ESP_tag_player_D3DBox_pixelOffsetY, ping, 9.0f, D3DCOLOR_ARGB(111, 0, 15, 133));
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + 11.0f + ESP_tag_player_D3DBox_pixelOffsetY, 100.0f, 10.0f, D3DCOLOR_ARGB(111, 0, 0, 0));
+
+				if (va > 0.0f)
+				{
+					if (va > 100.0f)
+						va = 100.0f;
+					va /= 1.0f;
+					render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+						playerBaseY + ESP_tag_player_D3DBox_pixelOffsetY, va - 1.0f, 10.0f, D3DCOLOR_ARGB(111, 0, 0, 0));
+					render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+						playerBaseY + 1.0f + ESP_tag_player_D3DBox_pixelOffsetY, va - 2.0f, 9.0f,
+						D3DCOLOR_ARGB(70, 210, 210, 210));
+				}
+
+
+				h = pD3DFontFixedSmall->DrawHeight() + 1;
+
+				if (!g_Players)
+				{
+					_snprintf_s(buf, sizeof(buf) - 1, "H: %d / A: %d", (int)iterPed->GetHealth(), (int)iterPed->GetArmor());
+					pD3DFontFixedSmall->PrintWithoutShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 10.0f, playerBaseY - h + 13.0f,
+						D3DCOLOR_ARGB(130, 0xF0, 0xF0, 0xF0), buf);
+				}
+				else
+				{
+					_snprintf_s(buf, sizeof(buf) - 1, "H: %d / A: %d",
+						(int)g_Players->pRemotePlayer[iSAMPID]->pPlayerData->fActorHealth,
+						(int)g_Players->pRemotePlayer[iSAMPID]->pPlayerData->fActorArmor);
+					pD3DFontFixedSmall->PrintWithoutShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 10.0f, playerBaseY - h + 13.0f,
+						D3DCOLOR_ARGB(130, 0xF0, 0xF0, 0xF0), buf);
+
+					_snprintf_s(buf, sizeof(buf) - 1, "P: %d / L: %d",
+						g_Players->pRemotePlayer[iSAMPID]->iPing,
+						g_Players->pRemotePlayer[iSAMPID]->iScore);
+					pD3DFontFixedSmall->PrintWithoutShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 10.0f, playerBaseY - h + 23.0f,
+						D3DCOLOR_ARGB(130, 0xF0, 0xF0, 0xF0), buf);
+
+					uint32_t samp_info = (uint32_t)g_SAMP;
+					uint32_t func = g_dwSAMP_Addr + SAMP_FUNC_UPDATESCOREBOARDDATA;
+					__asm mov ecx, samp_info
+
+					__asm call func
+
+					h = pD3DFont_sampStuff->DrawHeight() - 1;
+
+					char isAFK[5];
+					if (g_Players->pRemotePlayer[iSAMPID]->pPlayerData->iAFKState == 2)
+						sprintf(isAFK, "[AFK] ");
+					else
+						sprintf(isAFK, "");
+
+					_snprintf_s(buf, sizeof(buf) - 1, "%s%s (%d)", isAFK, getPlayerName(iSAMPID), iSAMPID);
+					float w = pD3DFont_sampStuff->DrawLength(buf);
+					pD3DFont_sampStuff->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX, playerBaseY - h,
+						samp_color_get(iSAMPID, 0xDD000000), buf);
+				}
+			}
+
+		if (A_Set.tags == 4)
+		{	
+				float hpbar = vh;
+				if (hpbar > 100.0f)
+					hpbar = 100.0f;
+				hpbar *= 70.0f / 100.0f;
+
+				float offY = ESP_tag_player_D3DBox_pixelOffsetY;
+				if (va > 0.0f)
+				{
+					float armbar = va;
+					if (armbar > 100.0f)
+						armbar = 100.0f;
+					armbar *= 70.0f / 100.0f;
+					render->D3DBoxBorder(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+						playerBaseY + offY, 70.0f, 6.0f, D3DCOLOR_ARGB(255, 0, 0, 0), D3DCOLOR_ARGB(128, 50, 50, 50));
+					render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+						playerBaseY + 1.0f + offY, armbar - 2.0f, 4.0f, D3DCOLOR_ARGB(128, 250, 250, 250));
+					offY += 7.0f;
+				}
+
+				render->D3DBoxBorder(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + offY, 70.0f, 6.0f, D3DCOLOR_ARGB(255, 0, 0, 0), D3DCOLOR_ARGB(128, 80, 0, 0));
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + 1.0f + offY, hpbar - 2.0f, 4.0f, D3DCOLOR_ARGB(128, 255, 0, 0));
+
+				// this should also calculate the anti-aliasing top edge somehow
+				h = pD3DFontFixedSmall->DrawHeight() + 1;
+
+				if (va > 0.0f)
+					sprintf_s(buf, "A: %d H: %d", (int)va, (int)vh);
+				else
+					sprintf_s(buf, "H: %d P: %d L: %d ", (int)vh, g_Players->pRemotePlayer[iSAMPID]->iPing,
+						g_Players->pRemotePlayer[iSAMPID]->iScore);
+					float w = pD3DFontFixedSmall->DrawLength(buf);
+					pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX, playerBaseY + 6.0f + offY,
+						D3DCOLOR_ARGB(0xFF, 0xF0, 0xF0, 0xF0), buf);
+
+					if (va > 0.0f)
+					{
+						sprintf_s(buf, "P: %d L: %d", g_Players->pRemotePlayer[iSAMPID]->iPing,
+							g_Players->pRemotePlayer[iSAMPID]->iScore);
+						w = pD3DFontFixedSmall->DrawLength(buf);
+						pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX, playerBaseY + 18.0f + offY,
+							D3DCOLOR_ARGB(0xFF, 0xF0, 0xF0, 0xF0), buf);
+					}
+
+				if (g_Players)
+				{
+					// render the main nametag last so it's on top
+					// this should calculate the anti-aliasing top edge somehow
+					h = pD3DFont_sampStuff->DrawHeight() - 1;
+					sprintf_s(buf, "%s (%d)", getPlayerName(iSAMPID), iSAMPID);
+					pD3DFont_sampStuff->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX, playerBaseY - h,
+						samp_color_get(iSAMPID, 0xDD000000), buf);
+
+					if (g_Players->pRemotePlayer[iSAMPID]->pPlayerData->iAFKState == 2)
+					{
+						pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 73.0f, playerBaseY - 5.0f + offY,
+							D3DCOLOR_ARGB(0xFF, 0xF0, 0xF0, 0xF0), "AFK");
+					}
+				}
+			}
+	
+		if (A_Set.tags == 2)
+		{
+			float hpbar = vh;
+			if (hpbar > 100.0f)
+				hpbar = 100.0f;
+			hpbar *= 70.0f / 100.0f;
+
+			float offY = ESP_tag_player_D3DBox_pixelOffsetY;
+			if (va > 0.0f)
 			{
-				pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f, playerBaseY + 6.0f + offY,
-												D3DCOLOR_ARGB(0xFF, 0xF0, 0xF0, 0xF0), "AFK");
+				float armbar = va;
+				if (armbar > 100.0f)
+					armbar = 100.0f;
+				armbar *= 70.0f / 100.0f;
+				render->D3DBoxBorder(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + offY, 70.0f, 6.0f, D3DCOLOR_ARGB(255, 0, 0, 0), D3DCOLOR_ARGB(128, 50, 50, 50));
+				render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+					playerBaseY + 1.0f + offY, armbar - 2.0f, 4.0f, D3DCOLOR_ARGB(128, 250, 250, 250));
+				offY += 7.0f;
+			}
+
+			render->D3DBoxBorder(g_playerTagInfo[iGTAID].tagPosition.fX + ESP_tag_player_D3DBox_pixelOffsetX,
+				playerBaseY + offY, 70.0f, 6.0f, D3DCOLOR_ARGB(255, 0, 0, 0), D3DCOLOR_ARGB(128, 80, 0, 0));
+			render->D3DBox(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f + ESP_tag_player_D3DBox_pixelOffsetX,
+				playerBaseY + 1.0f + offY, hpbar - 2.0f, 4.0f, D3DCOLOR_ARGB(128, 255, 0, 0));
+
+			// this should also calculate the anti-aliasing top edge somehow
+			h = pD3DFontFixedSmall->DrawHeight() + 1;
+
+			if (va > 0.0f)
+				sprintf_s(buf, "%d {E00000}%d", (int)va, (int)vh);
+			else
+				sprintf_s(buf, "{E00000}%d", (int)vh);
+			float w = pD3DFontFixedSmall->DrawLength(buf);
+			pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 70.0f - w - 1.0f, playerBaseY + 6.0f + offY,
+				D3DCOLOR_ARGB(0xFF, 0xF0, 0xF0, 0xF0), buf);
+			if (g_Players)
+			{
+				// render the main nametag last so it's on top
+				// this should calculate the anti-aliasing top edge somehow
+				h = pD3DFont_sampStuff->DrawHeight() - 1;
+				sprintf_s(buf, "%s (%d)", getPlayerName(iSAMPID), iSAMPID);
+				pD3DFont_sampStuff->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX, playerBaseY - h,
+					samp_color_get(iSAMPID, 0xDD000000), buf);
+
+				if (g_Players->pRemotePlayer[iSAMPID]->pPlayerData->iAFKState == 2)
+				{
+					pD3DFontFixedSmall->PrintShadow(g_playerTagInfo[iGTAID].tagPosition.fX + 1.0f, playerBaseY + 6.0f + offY,
+						D3DCOLOR_ARGB(0xFF, 0xF0, 0xF0, 0xF0), "AFK");
+				}
 			}
 		}
 	}
-
 	// end render ESP tags
 }
 
@@ -1576,7 +1817,7 @@ void renderPlayerInfoList ( void )
 	int							amount_players = getPlayerCount();
 	if ( amount_players == 1 )
 	{
-		pD3DFont_sampStuff->PrintShadow( width, height, D3DCOLOR_XRGB(255, 255, 255),
+		pD3DFont_sampStuff->PrintShadow(width, height, color_text,
 										 "There are no more players but you" );
 		return;
 	}
@@ -1885,7 +2126,7 @@ void renderScoreList ()
 					pD3DFont_sampStuff->DrawHeight() + 3.0f, D3DCOLOR_ARGB(150, 200, 200, 200) );
 	_snprintf_s( buffer, sizeof(buffer)-1, "%s (%s:%d) Connected Players: %d", g_SAMP->szHostname, g_SAMP->szIP,
 				 g_SAMP->ulPort, amount_players );
-	pD3DFont_sampStuff->PrintShadow( loc[0], loc[1], D3DCOLOR_ARGB(200, 255, 255, 255), buffer );
+	pD3DFont_sampStuff->PrintShadow(loc[0], loc[1], D3DCOLOR_ALPHA(200, color_text), buffer);
 	loc[1] += 10.0f + pD3DFont_sampStuff->DrawHeight();
 
 	render->D3DBox( loc[0] - 10.0f, loc[1] - 10.0f, (pPresentParam.BackBufferWidth / 2),
@@ -1955,8 +2196,8 @@ void renderKillList ( void )
 
 	if ( kill_render && !gta_menu_active() )
 	{
-		float	x = (float)pPresentParam.BackBufferWidth - 180.0f;
-		float	y = 220.0f;
+        float	x = A_Set.killListPos.x;//(float)pPresentParam.BackBufferWidth - 180.0f;
+        float	y = A_Set.killListPos.y;//220.0f;
 		float	w, h;
 		int		i;
 
@@ -1997,20 +2238,43 @@ void renderKillList ( void )
 				{
 					char	buf[32];
 					sprintf( buf, "%d", type );
-					pD3DFontChat->PrintShadow( x - 12.0f, y - 12.0f, 0xFFFFFFFF, buf );
+					pD3DFont->PrintShadow(x - 12.0f, y - 12.0f, 0xFFFFFFFF, buf);
 				}
 
-				h = pD3DFontChat->DrawHeight() / 2.0f;
+				h = pD3DFont->DrawHeight() / 2.0f;
 				if ( strlen(ent->szKiller) == 0 )
 				{
-					w = pD3DFontChat->DrawLength( ent->szVictim );
-					pD3DFontChat->PrintShadow( x - 16.0f - w, y - h, ent->clVictimColor, ent->szVictim );
+					char victim[32];
+					int  idvic = getPlayerID(ent->szVictim);
+
+					if (idvic = -1)
+						sprintf(victim, "%s", ent->szVictim);
+					else
+						sprintf(victim, "%s [%d]", ent->szVictim, idvic);
+
+					w = pD3DFont->DrawLength(victim);
+					pD3DFont->PrintShadow(x - 16.0f - w, y - h, ent->clVictimColor, victim);
 				}
 				else
 				{
-					w = pD3DFontChat->DrawLength( ent->szKiller );
-					pD3DFontChat->PrintShadow( x - 16.0f - w, y - h, ent->clKillerColor, ent->szKiller );
-					pD3DFontChat->PrintShadow( x + 16.0f, y - h, ent->clVictimColor, ent->szVictim );
+					char victim[32];
+					char killer[32];
+					int  idvic = getPlayerID(ent->szVictim);
+					int  idkill = getPlayerID(ent->szKiller);
+
+					if (idvic == -1)
+						sprintf(victim, "%s", ent->szVictim);
+					else
+						sprintf(victim, "%s[%d]", ent->szVictim, idvic);
+
+					if (idkill == -1)
+						sprintf(killer, "%s", ent->szKiller);
+					else
+						sprintf(killer, "%s[%d]", ent->szKiller, idkill);
+
+					w = pD3DFont->DrawLength(killer);
+					pD3DFont->PrintShadow(x - 16.0f - w, y - h, ent->clKillerColor, killer);
+					pD3DFont->PrintShadow(x + 16.0f, y - h, ent->clVictimColor, victim);
 				}
 			}
 
@@ -2938,6 +3202,44 @@ void renderPlayerInfo ( int iPlayerID )
 
 extern int	iDebuggingPlayer, iViewingInfoPlayer;
 
+inline void renderCheckers()
+{
+    traceLastFunc("renderCheckers()");
+
+    static const uint32_t maxTime = 30000;//ms^(-1)
+    static const uint32_t thresholdTime = maxTime / 2;
+    static const uint32_t coefficientTime = thresholdTime / 250;
+
+    if ((GetAsyncKeyState(VK_TAB) < 0 && set.d3dtext_score)
+        || g_Scoreboard->iIsEnabled) return;
+
+    if (GetAsyncKeyState(VK_F10) < 0)
+        return;
+
+    if (cheat_state->_generic.cheat_panic_enabled)
+        return;
+
+    if (!gta_menu_active())
+    {
+        pD3DFont->PrintShadow(A_Set.aCheckPos.x, A_Set.aCheckPos.y, color_enable, "Админы в сети:");
+        pD3DFont->PrintShadow(A_Set.aCheckPos.x, A_Set.aCheckPos.y, color_text, A_Set.aCheckerMsg.c_str());
+        pD3DFont->PrintShadow(A_Set.pCheckPos.x, A_Set.pCheckPos.y, color_enable, "Игроки в сети:");
+        pD3DFont->PrintShadow(A_Set.pCheckPos.x, A_Set.pCheckPos.y, color_text, A_Set.pCheckerMsg.c_str());
+
+        if (time_get() - A_Set.connectTime <= maxTime)
+            if (time_get() - A_Set.connectTime > thresholdTime)
+                pD3DFont->PrintShadow(A_Set.connectionPos.x, A_Set.connectionPos.y, 0x0000FF00 | (((maxTime - (time_get() - A_Set.connectTime)) / coefficientTime) << 24), A_Set.connectLog.c_str());
+                else
+                    pD3DFont->PrintShadow(A_Set.connectionPos.x, A_Set.connectionPos.y, 0xFF00FF00, A_Set.connectLog.c_str());
+        if (time_get() - A_Set.disconnectTime <= maxTime)
+            if (time_get() - A_Set.disconnectTime > thresholdTime)
+                pD3DFont->PrintShadow(A_Set.connectionPos.x, A_Set.connectionPos.y + pD3DFont->DrawHeight() + 1, 0x00FF0000 | (((maxTime - (time_get() - A_Set.disconnectTime)) / coefficientTime) << 24), A_Set.disconnectLog.c_str());
+                else
+                    pD3DFont->PrintShadow(A_Set.connectionPos.x, A_Set.connectionPos.y + pD3DFont->DrawHeight() + 1, 0xFFFF0000, A_Set.disconnectLog.c_str());
+        
+    }
+}
+
 void renderSAMP ( void )
 {
 	traceLastFunc( "renderSAMP()" );
@@ -2993,9 +3295,11 @@ void renderSAMP ( void )
 		g_RakClient = new RakClient( g_SAMP->pRakClientInterface );
 		g_SAMP->pRakClientInterface = new HookedRakClientInterface();
 		
+        initAdminSettings();
 		// init modCommands
 		if ( set.mod_commands_activated )
 			initChatCmds();
+		adminFunctions_cmds();
 
 		memcpy_safe((void *)0x004B35A0, (uint8_t *)"\x83\xEC\x0C\x56\x8B\xF1", 6 ); // godmode patch
 		
@@ -3003,9 +3307,8 @@ void renderSAMP ( void )
 		*(BYTE*)0xBAB318 = 0;
 		memset_safe((void *)0x53E94C, 0, 1);
 		
-	//	addMessageToChatWindow("%s%s %swith %s%s %s %sloaded (��������� by %sMarko Friedmann%s)", szColorEnable, M0D_NAME, szColorText, szColorEnable, M0DM_NAME, M0DM_VERS, szColorText, szColorEnable, szColorText);
-		DefaultFunctions();
-
+	   addMessageToChatWindow("Чтобы узнать функции собейта введите - %s/ahelp%s", szColorEnable, szColorText);
+		
 		g_renderSAMP_initSAMPstructs = 1;
 	}
 
@@ -3033,6 +3336,7 @@ void renderSAMP ( void )
 		renderScoreList();
 		renderTextLabels();
 		clickWarp();
+        renderCheckers();
 
 		if ( iViewingInfoPlayer != -1 )
 		{
@@ -3041,7 +3345,6 @@ void renderSAMP ( void )
 			else
 				renderPlayerInfo( iViewingInfoPlayer );
 		}
-
 
 		static int	a;
 		if ( !a )
@@ -3078,42 +3381,6 @@ void mapMenuTeleport ( void )
 			}
 		}
 	}
-}
-
-void texturesInitResources ( IDirect3DDevice9 *pDevice, D3DPRESENT_PARAMETERS *pPresentationParameters )
-{
-	if ( set.speedometer_enable
-	 &&	 (
-			 fopen(set.speedometer_speedo_png_filename, "rb") == NULL
-	 ||	 fopen(set.speedometer_needle_png_filename, "rb") == NULL
-	 ) )
-	{
-		Log( "Could not find the speedometer files, disabling it." );
-		set.speedometer_enable = false;
-		set.speedometer_old_enable = true;
-	}
-	else if ( set.speedometer_enable )
-	{
-		// init speedo
-		tSpeedoPNG = NULL;
-		sSpeedoPNG = NULL;
-		tNeedlePNG = NULL;
-		sNeedlePNG = NULL;
-		if ( !tSpeedoPNG )
-			D3DXCreateTextureFromFile( pDevice, set.speedometer_speedo_png_filename, &tSpeedoPNG );
-		if ( !sSpeedoPNG )
-			D3DXCreateSprite( pDevice, &sSpeedoPNG );
-		if ( !tNeedlePNG )
-			D3DXCreateTextureFromFile( pDevice, set.speedometer_needle_png_filename, &tNeedlePNG );
-		if ( !sNeedlePNG )
-			D3DXCreateSprite( pDevice, &sNeedlePNG );
-		needlePos.x = ( pPresentationParameters->BackBufferWidth / 1024.0f );
-		needlePos.y = ( pPresentationParameters->BackBufferHeight / 768.0f );
-		speedoPos.x = ( 750.0f * needlePos.x );
-		speedoPos.y = pPresentationParameters->BackBufferHeight - ( 292.0f * needlePos.y );
-	}
-	
-	// ret
 }
 
 float		fpsDisplay, fpsBuf1, fpsBuf2, fpsBuf3, fpsBuf4;
@@ -3161,14 +3428,6 @@ void proxyID3DDevice9_UnInitOurShit ( void )
 	SAFE_RELEASE( chams_green );
 	SAFE_RELEASE( chams_blue );
 	SAFE_RELEASE( chams_red );
-
-	if ( set.speedometer_enable )
-	{
-		SAFE_RELEASE( sSpeedoPNG );
-		SAFE_RELEASE( tSpeedoPNG );
-		SAFE_RELEASE( sNeedlePNG );
-		SAFE_RELEASE( tNeedlePNG );
-	}
 	
 	// death texture
 	SAFE_RELEASE( pSpriteTexture );
@@ -3201,9 +3460,6 @@ void proxyID3DDevice9_InitOurShit ( D3DPRESENT_PARAMETERS *pPresentationParamete
 	GenerateShader( origIDirect3DDevice9, &chams_green, 0.8f, 0, 1.0f, 0 );
 	GenerateShader( origIDirect3DDevice9, &chams_blue, 0.8f, 0, 0, 1.0f );
 	GenerateShader( origIDirect3DDevice9, &chams_red, 0.8f, 1.0f, 0, 0 );
-
-	// load GUI textures/sprits
-	texturesInitResources( origIDirect3DDevice9, pPresentationParameters );
 
 	// load death texture
 	LoadSpriteTexture();
@@ -3487,11 +3743,9 @@ void renderHandler()
 	char		buf[256];
 	float		x = 0.0f;
 
-	uint32_t	color_text = D3DCOLOR_ARGB( 255, 255, 255, 255 );
-	uint32_t	color_enabled = D3DCOLOR_ARGB( 191, 148, 0, 211 );
-	uint32_t	color_disabled = D3DCOLOR_ARGB( 255, 255, 255, 255 );
-	char szColorEnable[9] = "{8A2BE2}", szColorText[9] = "{FFFFFF}";
-	
+	//uint32_t	color_text = D3DCOLOR_ARGB( 255, 255, 255, 255 );
+	//uint32_t	color_enabled = D3DCOLOR_ARGB( 191, 148, 0, 211 );
+	//uint32_t	color_disabled = D3DCOLOR_ARGB( 255, 255, 255, 255 );
 
 	if ( isBeginRenderWIN )
 	{
@@ -3499,6 +3753,43 @@ void renderHandler()
 
 		if ( set.d3dtext_hud )
 		{
+			if (A_Set.process != 0)
+			{
+				int		ROW_HEIGHT = (int)ceilf(pD3DFont->DrawHeight()),
+					MENU_HEIGHT = (int)ceilf(pD3DFont->DrawHeight() * (float)MENU_ROWS) + 2,
+					left = pPresentParam.BackBufferWidth / 2 - MENU_WIDTH / 2,
+					top = pPresentParam.BackBufferHeight - MENU_HEIGHT - ROW_HEIGHT - 2 - 20 - 2;
+				char	text[300];
+
+				if (A_Set.process == 1)
+				{
+					sprintf(text, "Идёт процесс выдачи игрокам из составленного списка.\nДля остановки используйте клавишу \"{FF0000}0{FFFFFF}\" или команду {FF0000}/stop{FFFFFF}.\nОсталось {00FF00}%d{FFFFFF} игроков.", A_Set.players_left);
+					pD3DFont->PrintShadow((float)(left), (float)(top), color_text, text);
+				}
+				else if (A_Set.process == 2)
+				{
+					sprintf(text, "Идёт процесс сбора игроков в список для телепортации.\nВ списке {009BFF}%d{FFFFFF} игроков. Используйте {FF0000}/stoplist{FFFFFF} для остановки.", A_Set.tpcount);
+					pD3DFont->PrintShadow((float)(left), (float)(top), color_text, text);
+				}
+				else if (A_Set.process == 3)
+				{
+					sprintf(text, "Идёт процесс телепортации игроков из составленного списка.\nОсталось {00FF00}%d{FFFFFF} игроков. Для остановки используйте клавишу \"{FF0000}0{FFFFFF}\".", A_Set.tpcount_left);
+					pD3DFont->PrintShadow(float(left), (float)(top), color_text, text);
+				}
+				else if (A_Set.process == 4)
+				{
+					sprintf(text, "Идёт процесс массовой выдачи игрокам в зоне прорисовки.\nДля остановки используйте клавишу \"{FF0000}0{FFFFFF}\" или команду {FF0000}/stop		{FFFFFF}.\nОсталось {00FF00}%d{FFFFFF} игроков.", A_Set.mass_players_left);
+					pD3DFont->PrintShadow((float)(left), (float)(top), color_text, text);
+				}
+				else
+				{
+					sprintf(text, "Идёт процесс увольнения игроков из составленного списка.\nОсталось {00FF00}%d{FFFFFF} игроков. Для остановки используйте клавишу \"{FF0000}0{FFFFFF}\".", A_Set.uninv_players_left);
+					pD3DFont->PrintShadow((float)(left), (float)(top), color_text, text);
+				}
+			}
+
+            uint16_t fps_lenght;
+
 			if (cheat_panic() || cheat_state->state == CHEAT_STATE_NONE)
 			{
 				if (set.flickering_problem)
@@ -3511,7 +3802,7 @@ void renderHandler()
 						if (!g_renderSAMP_initSAMPstructs)
 						{
 							_snprintf_s(buf, sizeof(buf) - 1, "%s%s%s version %s%s%s\n---------------------------------------------------\nSpecial for %s%s%s by %s%s%s",
-							  szColorEnable, M0D_NAME,szColorText, szColorEnable, M0D_VERSION, szColorText, szColorEnable, SAMP_VERSION, szColorText, szColorEnable, M0D_AUTHOR, szColorText);//changee color
+								szColorEnable, M0D_NAME, szColorText, szColorEnable, M0D_VERSION, szColorText, szColorEnable, SAMP_VERSION, szColorText, szColorEnable, M0D_AUTHOR, szColorEnable);//changee color
 							pD3DFont->PrintShadow(2.0f, (float)(pPresentParam.BackBufferHeight) - pD3DFont->DrawHeight() - 33, color_text, buf);
 						}
 					}
@@ -3530,97 +3821,115 @@ void renderHandler()
 					if ( gta_menu_active() )
 						goto no_render;
 
-				if( !gta_menu_active() )
-				{
-					char timebuf[256]; 
-					SYSTEMTIME time; 
-					GetLocalTime(&time);       
-					sprintf(timebuf, "%02d:%02d:%02d", time.wHour, time.wMinute, time.wSecond);       
-					HUD_TEXT_TGL( x, D3DCOLOR_XRGB( 255, 255, 255 ), timebuf);  
-				}
+                if (!gta_menu_active())
+                {
+                    char timebuf[256];
+                    SYSTEMTIME time;
+                    GetLocalTime(&time);
+                    sprintf(timebuf, "%02d:%02d:%02d", time.wHour, time.wMinute, time.wSecond);
+                    HUD_TEXT_TGL(x, color_text, timebuf);
 
-				if ( set.hud_indicator_inv )
-				{
-					HUD_TEXT_TGL( x, cheat_state->_generic.hp_cheat ? color_enabled : color_disabled, "Inv" );
-				}
+                    if (set.hud_indicator_inv)
+                    {
+                        HUD_TEXT_TGL(x, cheat_state->_generic.hp_cheat ? color_enable : color_text, "Inv");
+                    }
 
-				if ( set.hud_fps_draw )
-				{
-					float		m_FPS = getFPS();
-					int			m_FPS_int = (int)m_FPS;
-					uint32_t	color_fps = D3DCOLOR_XRGB( 200, 200, 0 );
-					if ( m_FPS_int >= 23 )
-						color_fps = D3DCOLOR_XRGB( 0, 200, 0 );
-					else if ( m_FPS_int >= 13 && m_FPS_int <= 22 )
-						color_fps = D3DCOLOR_XRGB( 200, 200, 0 );
-					else if ( m_FPS_int <= 12 )
-						color_fps = D3DCOLOR_XRGB( 200, 0, 0 );
-					if ( pGameInterface && pGameInterface->GetSettings()->IsFrameLimiterEnabled() )
-					{
-						_snprintf_s( buf, sizeof(buf)-1, "FPS:{FFFFFF} %0.0f (%d)", m_FPS, *(int *)0xC1704C );
+                    if (set.hud_fps_draw)
+                    {
+                        float		m_FPS = getFPS();
+                        if (pGameInterface && pGameInterface->GetSettings()->IsFrameLimiterEnabled())
+                        {
+                            _snprintf_s(buf, sizeof(buf) - 1, "FPS:{FFFFFF} %0.0f (%d)", m_FPS, *(int *)0xC1704C);
+                        }
+                        else
+                        {
+                            _snprintf_s(buf, sizeof(buf) - 1, "FPS:{FFFFFF} %0.0f", m_FPS);
+                        }
+
+                        fps_lenght = pD3DFont->DrawLength(buf) + 2;
+                        pD3DFont->PrintShadow(pPresentParam.BackBufferWidth - fps_lenght,
+							pPresentParam.BackBufferHeight - pD3DFont->DrawHeight() - 2, color_enable, buf);
+                    }
+                }
+			}
+
+			if (A_Set.bHudPing) {
+				static int timeUpdate;
+				if (g_Players != nullptr && g_Players->pLocalPlayer != nullptr) {
+					static int &ping = g_Players->iLocalPlayerPing;
+					if (time_get() - timeUpdate > MSEC_TO_TIME(1500)) { //update scoreboard - 3sec
+						updateScoreboardData();
+						timeUpdate = time_get();
 					}
-					else
-					{
-						_snprintf_s( buf, sizeof(buf)-1, "FPS:{FFFFFF} %0.0f", m_FPS );
-					}
-
-					pD3DFont->PrintShadow( pPresentParam.BackBufferWidth - pD3DFont->DrawLength(buf) - 2,
-										   pPresentParam.BackBufferHeight - pD3DFont->DrawHeight() - 2, D3DCOLOR_XRGB(148, 0, 211), buf );
+					uint32_t color_ping = 0;
+					if (ping <= 100)
+						color_ping = D3DCOLOR_ARGB(0, 0, 200, 0);
+					else if (ping > 100 && ping < 250)
+						color_ping = D3DCOLOR_ARGB(0, 200, 200, 0);
+					else if (ping >= 250)
+						color_ping = D3DCOLOR_ARGB(0, 200, 0, 0);
+					_snprintf_s(buf, sizeof(buf) - 1, "P:{%06X} %d", color_ping, ping);
+					fps_lenght += pD3DFont->DrawLength(buf) + 2;
+					pD3DFont->PrintShadow(pPresentParam.BackBufferWidth - fps_lenght,
+						pPresentParam.BackBufferHeight - pD3DFont->DrawHeight() - 2, color_enable, buf);
 				}
 			}
 
-			if ( cheat_state->state == CHEAT_STATE_VEHICLE )
-			{
-				if ( set.hud_indicator_inveh_airbrk )
+			if (!gta_menu_active()) {
+
+				if (cheat_state->state == CHEAT_STATE_VEHICLE)
 				{
-					HUD_TEXT_TGL( x, cheat_state->vehicle.air_brake ? color_enabled : color_disabled, "AirBrk" );
-				}
+					if (set.hud_indicator_inveh_airbrk)
+					{
+						HUD_TEXT_TGL(x, cheat_state->vehicle.air_brake ? color_enable : color_text, "AirBrk");
+					}
 
 
-				if ( set.hud_indicator_inveh_fly )
-				{
-					HUD_TEXT_TGL( x, cheat_state->vehicle.fly ? color_enabled : color_disabled, "Fly" );
+					if (set.hud_indicator_inveh_fly)
+					{
+						HUD_TEXT_TGL(x, cheat_state->vehicle.fly ? color_enable : color_text, "Fly");
+					}
 				}
+				else if (cheat_state->state == CHEAT_STATE_ACTOR)
+				{
+					if (set.hud_indicator_onfoot_airbrk)
+					{
+						HUD_TEXT_TGL(x, cheat_state->actor.air_brake ? color_enable : color_text, "AirBrk");
+					}
 
-				if (set.hud_indicator_chatcolors && !gta_menu_active())
-				{
-					HUD_TEXT_TGL(x, cheat_state->_generic.chatcolors ? color_enabled : color_disabled, "ChatColors");
-				}
 
-			}
-			else if ( cheat_state->state == CHEAT_STATE_ACTOR )
-			{
-				if ( set.hud_indicator_onfoot_airbrk )
-				{
-					HUD_TEXT_TGL( x, cheat_state->actor.air_brake ? color_enabled : color_disabled, "AirBrk" );
-				}
+					if (set.hud_indicator_onfoot_fly)
+					{
+						HUD_TEXT_TGL(x, cheat_state->actor.fly_on ? color_enable : color_text, "Fly");
+					}
+				} // end CHEAT_STATE_ACTOR
 
-				
-				if ( set.hud_indicator_onfoot_fly )
+				if (cheat_state->state != CHEAT_STATE_NONE)
 				{
-					HUD_TEXT_TGL( x, cheat_state->actor.fly_on ? color_enabled : color_disabled, "Fly" );
-				}
-								if (set.hud_indicator_chatcolors && !gta_menu_active())
-				{
-					HUD_TEXT_TGL(x, cheat_state->_generic.chatcolors ? color_enabled : color_disabled, "ChatColors");
-				}
-			} // end CHEAT_STATE_ACTOR
+					if (A_Set.bHudIndicatorChatcolors)
+					{
+						HUD_TEXT_TGL(x, A_Set.bChatcolor ? color_enable : color_text, "ChatColors");
+					}
 
-			if ( cheat_state->state != CHEAT_STATE_NONE )
-			{
-				if (set.hud_indicator_pos)
-				{
-					float	*coord =
-						( cheat_state->state == CHEAT_STATE_VEHICLE )
+					if (A_Set.bHudIndicatorTrace)
+					{
+						HUD_TEXT_TGL(x, A_Set.bTraces ? color_enable : color_text, "Trace");
+					}
+
+					if (set.hud_indicator_pos)
+					{
+						float	*coord =
+							(cheat_state->state == CHEAT_STATE_VEHICLE)
 							? cheat_state->vehicle.coords : cheat_state->actor.coords;
 
-					_snprintf_s( buf, sizeof(buf)-1, "Coords: {FFFFFF}%0.2f %0.2f %0.2f  %d", coord[0], coord[1], coord[2],
-								 gta_interior_id_get() );
-					pD3DFont->PrintShadow( pPresentParam.BackBufferWidth - pD3DFont->DrawLength(buf) - 60,
-										   pPresentParam.BackBufferHeight - pD3DFont->DrawHeight() - 2, D3DCOLOR_XRGB(148, 0, 211), buf );
+						_snprintf_s(buf, sizeof(buf) - 1, "Coords: {FFFFFF}%0.2f %0.2f %0.2f  %d", coord[0], coord[1], coord[2],
+							gta_interior_id_get());
+						fps_lenght += pD3DFont->DrawLength(buf) + 2;
+						pD3DFont->PrintShadow(pPresentParam.BackBufferWidth - fps_lenght,
+							pPresentParam.BackBufferHeight - pD3DFont->DrawHeight() - 2, color_enable, buf);
+					}
 				}
 			}
-
 			if ( cheat_state->text_time > 0 && time_get() - cheat_state->text_time < MSEC_TO_TIME(3000) )
 			{
 				uint32_t	color, alpha = 255;
@@ -3628,16 +3937,24 @@ void renderHandler()
 				if ( time_get() - cheat_state->text_time > MSEC_TO_TIME(2000) )
 					alpha -= ( time_get() - cheat_state->text_time - MSEC_TO_TIME(2000) ) * 255 / MSEC_TO_TIME( 1000 );
 
-				color = D3DCOLOR_ARGB( alpha, 255, 255, 255 );
+				color = D3DCOLOR_ALPHA(alpha, color_text);
 
 				_snprintf_s( buf, sizeof(buf)-1, "%s <-", cheat_state->text );
 				pD3DFont->PrintShadow( pPresentParam.BackBufferWidth - pD3DFont->DrawLength(buf) - 3.0f, 1,
-									   D3DCOLOR_ARGB(alpha, 255, 255, 255), buf );
+					D3DCOLOR_ALPHA(alpha, color_text), buf);
 			}
 		}
 
 		renderSAMP();	// sure why not
 		renderPlayerTags();
+
+		if (A_Set.bTraces && !A_Set.Tracers.empty())
+		{
+			for (auto& iter : A_Set.Tracers)
+			{
+				render->DrawLine(iter.start, iter.end, iter.color);
+			}
+		}
 
 		if ( cheat_state->_generic.teletext )
 			RenderTeleportTexts();
